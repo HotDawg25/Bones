@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bones</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0e0f11;
+      --card-bg:      #16181c;
+      --border:       #2a2d35;
+      --shadow:       #000000;
+      --text-main:    #f0f0f0;
+      --text-muted:   #8a8f9a;
+      --accent-red:   #e74c3c;
+      --accent-teal:  #39c5bb;
+      --accent-gold:  #f1c40f;
+      --accent-green: #27ae60;
+      --accent-blue:  #2980b9;
+      --accent-pink:  #e91e8c;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 3rem 1.5rem 4rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── HEADER ──────────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      max-width: 620px;
+      margin-bottom: 3.5rem;
+    }
+
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .logo-icon {
+      font-size: 2.6rem;
+      line-height: 1;
+    }
+
+    header h1 {
+      font-size: 3.4rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      /* slight skeleton-bone texture via layered text-shadows */
+      text-shadow:
+        3px 3px 0 #000,
+        0 0 30px rgba(231,76,60,0.25);
+    }
+
+    header p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 0.6rem;
+    }
+
+    /* ── GRID ────────────────────────────────────────────────────── */
+    .grid {
+      width: 100%;
+      max-width: 1060px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 1.8rem;
+    }
+
+    /* ── CARD ────────────────────────────────────────────────────── */
+    .card {
+      background-color: var(--card-bg);
+      border: 2.5px solid var(--border);
+      border-radius: 18px;
+      padding: 1.1rem;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 5px 5px 0px var(--shadow);
+      transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translate(-3px, -3px);
+      box-shadow: 8px 8px 0px var(--shadow);
+      border-color: var(--hover-accent, #444);
+    }
+
+    .card:active {
+      transform: translate(1px, 1px);
+      box-shadow: 3px 3px 0px var(--shadow);
+    }
+
+    /* Subtle accent line along the top of the card */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--hover-accent, #333);
+      border-radius: 18px 18px 0 0;
+      opacity: 0.7;
+    }
+
+    /* ── THUMBNAIL ───────────────────────────────────────────────── */
+    .thumb {
+      width: 100%;
+      height: 170px;
+      border: 2px solid var(--border);
+      border-radius: 11px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: #0a0b0d;
+    }
+
+    /* Animated pixel-art style preview for each game */
+    .thumb-sandbox {
+      background: linear-gradient(160deg, #0d1b2a 0%, #111827 60%, #1a2535 100%);
+    }
+    .thumb-sandbox canvas-mock {
+      display: block;
+      width: 100%; height: 100%;
+    }
+
+    .thumb-doom {
+      background: linear-gradient(160deg, #0a0a0a 0%, #0d1a0d 60%, #0a1200 100%);
+    }
+
+    .thumb-cave {
+      background: linear-gradient(160deg, #050505 0%, #0c0c14 60%, #050510 100%);
+    }
+
+    /* Emoji icon placeholders - large, central, slightly glowing */
+    .thumb-icon {
+      font-size: 4.5rem;
+      filter: drop-shadow(0 0 18px currentColor);
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* Small pixel-dots decorating corners of thumbnails */
+    .thumb::after {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      border: 1px dashed rgba(255,255,255,0.05);
+      border-radius: 7px;
+      pointer-events: none;
+    }
+
+    /* ── META ROW ────────────────────────────────────────────────── */
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 0.22rem 0.6rem;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      color: #0e0f11;
+    }
+
+    .status {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .status.live::before { content: '● '; color: #27ae60; }
+    .status.wip::before  { content: '◌ '; color: #f1c40f; }
+
+    /* ── CARD TEXT ───────────────────────────────────────────────── */
+    .card-title {
+      font-size: 1.28rem;
+      font-weight: 800;
+      margin-bottom: 0.35rem;
+      line-height: 1.15;
+    }
+
+    .card-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      flex-grow: 1;
+    }
+
+    /* ── FOOTER ──────────────────────────────────────────────────── */
+    footer {
+      margin-top: 4rem;
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    footer span { color: var(--accent-red); }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────────── */
+    @media (max-width: 500px) {
+      header h1 { font-size: 2.4rem; }
+      .grid { gap: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span class="logo-icon">💀</span>
+      <h1>Bones</h1>
+    </div>
+    <p>A collection of weird little web games.</p>
+  </header>
+
+  <main class="grid">
+
+    <!-- ── SUPER SKELETON SANDBOX ─────────────────────────────── -->
+    <a href="super-skeleton-sandbox.html" class="card"
+       style="--hover-accent: #e74c3c;">
+      <div class="thumb thumb-sandbox">
+        <span class="thumb-icon" style="color:#eef1f1;">💀</span>
+      </div>
+      <div class="meta">
+        <span class="badge" style="background: #e74c3c;">Physics</span>
+        <span class="status live">Live</span>
+      </div>
+      <h2 class="card-title">Super Skeleton Sandbox</h2>
+      <p class="card-desc">A physics playground where you ARE a skeleton. Fight zombies, pilot a submarine to Plastic Beach, discover secret achievements, and unlock gear as you explore a massive hand-built world.</p>
+    </a>
+
+    <!-- ── QUACK OF DEATH ─────────────────────────────────────── -->
+    <a href="moai_doom_v2.html" class="card"
+       style="--hover-accent: #27ae60;">
+      <div class="thumb thumb-doom">
+        <span class="thumb-icon" style="color:#4cff4c;">🗿</span>
+      </div>
+      <div class="meta">
+        <span class="badge" style="background: #27ae60;">Shooter</span>
+        <span class="status live">Live</span>
+      </div>
+      <h2 class="card-title">Quack of Death</h2>
+      <p class="card-desc">A retro FPS with a twist — you're a moaiduck. Defend yourself against Moaiduck mafiosos and survive as long as Humanly possible(or duckly possible in this case) can in this doom inspired arena shooter.</p>
+    </a>
+
+    <!-- ── CRAPPY CAVE EXPLORER ───────────────────────────────── -->
+    <a href="crappy_cave_explorer.html" class="card"
+       style="--hover-accent: #f1c40f;">
+      <div class="thumb thumb-cave">
+        <span class="thumb-icon" style="color:#ffd700;">⛏️</span>
+      </div>
+      <div class="meta">
+        <span class="badge" style="background: #f1c40f; color: #0e0f11;">Mining</span>
+        <span class="status live">Live</span>
+      </div>
+      <h2 class="card-title">Crappy Cave Explorer</h2>
+      <p class="card-desc">In this game youre a red cube progressing an infinitley generating cave, you can mine, and you can build,What else needs to be said? oh yeah, theres also other miners in there and skeletons.</p>
+    </a>
+
+  </main>
+
+  <footer>
+    Made with HTML &amp; too much coffee &nbsp;<span>𓆉</span>
+  </footer>
+
+</body>
+</html>
