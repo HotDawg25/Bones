@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QUACK OF DEATH</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Boogaloo&family=Oswald:wght@700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0a;overflow:hidden;font-family:'Oswald',sans-serif;color:#fff;height:100vh;display:flex;align-items:center;justify-content:center;}
+
+/* ── TITLE ── */
+#titleScreen{position:fixed;inset:0;background:#0a0a0a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:100;}
+#titleScreen h1{font-size:clamp(36px,8vw,88px);font-weight:700;color:#4cff4c;text-shadow:0 0 30px #4cff4c,0 0 60px #00ff00,4px 4px 0 #004400;letter-spacing:4px;text-align:center;line-height:1;}
+.sub{font-family:'Boogaloo',sans-serif;font-size:clamp(13px,2vw,20px);color:#88cc88;letter-spacing:2px;text-align:center;}
+.startBtn{font-family:'Oswald',sans-serif;font-size:22px;letter-spacing:3px;font-weight:700;background:#4cff4c;color:#001100;border:none;padding:14px 44px;cursor:pointer;box-shadow:0 0 20px #4cff4c88;transition:all .15s;}
+.startBtn:hover{background:#88ff88;box-shadow:0 0 40px #4cff4c;}
+.controls{font-family:'Boogaloo',sans-serif;font-size:15px;color:#446644;line-height:1.9;text-align:center;}
+
+canvas{display:block;cursor:none;}
+
+/* ── HUD ── */
+#hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:6px 14px;background:rgba(0,0,0,.88);border-bottom:2px solid #4cff4c22;pointer-events:none;z-index:20;gap:16px;flex-wrap:wrap;}
+.hudBlock{display:flex;flex-direction:column;align-items:center;}
+.hudLabel{font-size:10px;color:#446644;letter-spacing:1px;}
+.hudVal{font-size:20px;color:#4cff4c;font-weight:700;white-space:nowrap;}
+#healthBar{display:flex;gap:2px;font-size:16px;}
+
+/* ── GUN SLOTS ── */
+#gunSlots{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20;}
+.gunSlot{background:rgba(0,0,0,.85);border:2px solid #333;padding:6px 12px;font-family:'Oswald',sans-serif;font-size:14px;color:#888;min-width:90px;text-align:center;cursor:default;transition:all .15s;}
+.gunSlot.active{border-color:#4cff4c;color:#4cff4c;background:rgba(0,30,0,.9);box-shadow:0 0 10px #4cff4c44;}
+.gunSlot .gname{font-weight:700;}
+.gunSlot .gammo{font-size:11px;color:#446644;}
+
+/* ── BUILD BAR ── */
+#buildBar{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);display:none;gap:8px;z-index:20;background:rgba(0,0,0,.88);border:2px solid #ffaa00;padding:8px 16px;}
+.buildOpt{font-family:'Oswald',sans-serif;font-size:14px;color:#888;padding:4px 10px;cursor:pointer;border:1px solid #333;}
+.buildOpt:hover,.buildOpt.active{color:#ffaa00;border-color:#ffaa00;}
+#buildBar label{font-size:13px;color:#ffaa00;letter-spacing:1px;}
+
+/* ── WAVE ANNOUNCE ── */
+#waveAnnounce{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(28px,6vw,64px);font-weight:700;letter-spacing:6px;color:#4cff4c;text-shadow:0 0 30px #4cff4c;display:none;z-index:30;pointer-events:none;text-align:center;}
+
+/* ── PAUSE MENU ── */
+#pauseMenu{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:60;}
+#pauseMenu h2{font-size:clamp(28px,6vw,64px);color:#4cff4c;letter-spacing:6px;text-shadow:0 0 20px #4cff4c;}
+.pauseBtn{font-family:'Oswald',sans-serif;font-size:20px;letter-spacing:3px;background:none;border:2px solid #4cff4c44;color:#4cff4c88;padding:10px 36px;cursor:pointer;width:240px;transition:all .15s;}
+.pauseBtn:hover{border-color:#4cff4c;color:#4cff4c;background:rgba(0,50,0,.5);}
+
+/* ── CONSOLE ── */
+#consolePanel{position:fixed;inset:0;background:rgba(0,0,0,.96);display:none;flex-direction:column;z-index:70;padding:24px;font-family:'Courier New',monospace;}
+#consolePanel h3{color:#4cff4c;font-size:20px;margin-bottom:12px;letter-spacing:3px;}
+#consoleLog{flex:1;overflow-y:auto;color:#4cff4c;font-size:14px;line-height:1.7;margin-bottom:12px;border:1px solid #1a3a1a;padding:10px;background:#050d05;}
+#consoleInput{display:flex;gap:8px;}
+#consoleInput span{color:#4cff4c;font-size:16px;line-height:1;}
+#consoleInputField{flex:1;background:#050d05;border:1px solid #4cff4c44;color:#4cff4c;font-family:'Courier New',monospace;font-size:15px;padding:6px 10px;outline:none;}
+#consoleInput button{background:#4cff4c;color:#001100;border:none;padding:6px 16px;font-family:'Oswald',sans-serif;font-size:15px;cursor:pointer;}
+
+/* ── GAME OVER ── */
+#gameOver{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:50;}
+#gameOver h2{font-size:clamp(36px,7vw,80px);color:#ff4444;text-shadow:0 0 30px #ff4444;letter-spacing:4px;}
+#gameOver .scoreInfo{font-size:24px;color:#4cff4c;}
+
+/* ── ROLL INDICATOR ── */
+#rollBar{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);width:180px;height:8px;background:#111;border:1px solid #444;display:none;z-index:20;}
+#rollBarFill{height:100%;background:#4cff4c;width:100%;}
+#rollLabel{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);font-size:12px;color:#4cff4c;z-index:20;letter-spacing:1px;}
+</style>
+</head>
+<body>
+<div id="titleScreen">
+  <h1>QUACK<br>OF DEATH</h1>
+  <div class="sub">MOAI MAFIA MASSACRE</div>
+  <button class="startBtn" onclick="startGame()">PLAY</button>
+  <div class="controls">
+    WASD — Move &nbsp;|&nbsp; Mouse — Aim &amp; Shoot (hold)<br>
+    1-5 — Switch Gun &nbsp;|&nbsp; R — Reload &nbsp;|&nbsp; F — Roll<br>
+    B — Build Mode &nbsp;|&nbsp; P — Pause
+  </div>
+</div>
+
+<div id="hud" style="display:none">
+  <div class="hudBlock"><div class="hudLabel">HP</div><div id="healthBar"></div></div>
+  <div class="hudBlock"><div class="hudLabel">AMMO</div><div class="hudVal" id="ammoDisplay">0/0</div></div>
+  <div class="hudBlock"><div class="hudLabel">KILLS</div><div class="hudVal" id="killDisplay">0</div></div>
+  <div class="hudBlock"><div class="hudLabel">WAVE</div><div class="hudVal" id="waveDisplay">1</div></div>
+  <div class="hudBlock"><div class="hudLabel">SCORE</div><div class="hudVal" id="scoreDisplay">0</div></div>
+  <div class="hudBlock"><div class="hudLabel">BUILD</div><div class="hudVal" id="buildMode" style="color:#ffaa0088">OFF</div></div>
+</div>
+
+<div id="gunSlots"></div>
+<div id="buildBar"><label>BUILD:</label></div>
+<div id="rollLabel" style="display:none">ROLL [F]</div>
+<div id="rollBar" style="display:none"><div id="rollBarFill"></div></div>
+
+<div id="waveAnnounce"></div>
+
+<div id="pauseMenu">
+  <h2>PAUSED</h2>
+  <button class="pauseBtn" onclick="togglePause()">▶ RETURN TO GAME</button>
+  <button class="pauseBtn" onclick="openConsole()">⌨ CONSOLE</button>
+  <button class="pauseBtn" onclick="location.reload()" style="color:#ff4444aa;border-color:#ff444444">✕ QUIT</button>
+</div>
+
+<div id="consolePanel">
+  <h3>▶ CONSOLE</h3>
+  <div id="consoleLog"></div>
+  <div id="consoleInput">
+    <span>&gt;</span>
+    <input id="consoleInputField" type="text" placeholder="type a command..." autocomplete="off"/>
+    <button onclick="runConsoleCmd()">RUN</button>
+  </div>
+  <button class="pauseBtn" style="margin-top:12px;width:auto;padding:8px 24px" onclick="closeConsole()">← BACK</button>
+</div>
+
+<div id="gameOver">
+  <h2 id="deathTitle">YOU DIED</h2>
+  <div class="scoreInfo" id="finalScore">Score: 0</div>
+  <div class="scoreInfo" id="finalKills">Kills: 0</div>
+  <button class="startBtn" onclick="startGame()">TRY AGAIN</button>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function resize(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+resize(); window.addEventListener('resize',resize);
+
+// ═══════════════════════════════════════════════════════
+// GUN DEFINITIONS
+// ═══════════════════════════════════════════════════════
+const GUNS = [
+  {name:'PISTOL',    damage:1, fireRate:0.15, spread:0.06, bulletsPerShot:1, bulletSpeed:520, bulletLife:0.7, reloadTime:1.2, magSize:12, color:'#aaa',   ammo:12, reserve:48},
+  {name:'SHOTGUN',   damage:1, fireRate:0.7,  spread:0.3,  bulletsPerShot:6, bulletSpeed:420, bulletLife:0.5, reloadTime:1.8, magSize:8,  color:'#c87020',ammo:8,  reserve:32},
+  {name:'AK-47',     damage:1, fireRate:0.09, spread:0.12, bulletsPerShot:1, bulletSpeed:580, bulletLife:0.8, reloadTime:2.0, magSize:30, color:'#4a3010',ammo:30, reserve:90},
+  {name:'SNIPER',    damage:3, fireRate:0.9,  spread:0.01, bulletsPerShot:1, bulletSpeed:900, bulletLife:1.2, reloadTime:2.5, magSize:5,  color:'#336688',ammo:5,  reserve:20},
+  {name:'MINIGUN',   damage:1, fireRate:0.05, spread:0.2,  bulletsPerShot:1, bulletSpeed:480, bulletLife:0.6, reloadTime:3.5, magSize:100,color:'#666',   ammo:100,reserve:200},
+];
+let guns = [];
+let activeGun = 0;
+
+function initGuns(){
+  guns = GUNS.map(g=>({...g, ammo:g.magSize, reserve:g.reserve}));
+  renderGunSlots();
+}
+function renderGunSlots(){
+  const el = document.getElementById('gunSlots');
+  el.innerHTML='';
+  guns.forEach((g,i)=>{
+    const d=document.createElement('div');
+    d.className='gunSlot'+(i===activeGun?' active':'');
+    d.innerHTML=`<div class="gname">${i+1}. ${g.name}</div><div class="gammo">${g.ammo}/${g.reserve}</div>`;
+    d.onclick=()=>switchGun(i);
+    el.appendChild(d);
+  });
+}
+function switchGun(i){
+  if(reloading){reloading=false;reloadTimer=0;}
+  activeGun=i;
+  renderGunSlots();
+  updateAmmoHUD();
+}
+
+// ═══════════════════════════════════════════════════════
+// BUILD SYSTEM
+// ═══════════════════════════════════════════════════════
+const BUILD_TYPES = [
+  {id:'wall',   label:'Wall',    cost:0, tile:1},
+  {id:'crate',  label:'Crate',   cost:0, tile:2},
+  {id:'pillar', label:'Pillar',  cost:0, tile:3},
+  {id:'remove', label:'Remove',  cost:0, tile:-1},
+];
+let buildMode = false;
+let buildSelected = 0;
+let builtTiles = []; // track for admin
+
+function initBuildBar(){
+  const bar = document.getElementById('buildBar');
+  BUILD_TYPES.forEach((b,i)=>{
+    const btn=document.createElement('div');
+    btn.className='buildOpt'+(i===buildSelected?' active':'');
+    btn.textContent=b.label;
+    btn.onclick=()=>{buildSelected=i;updateBuildBar();};
+    bar.appendChild(btn);
+  });
+}
+function updateBuildBar(){
+  document.querySelectorAll('.buildOpt').forEach((b,i)=>b.classList.toggle('active',i===buildSelected));
+}
+function toggleBuildMode(){
+  buildMode=!buildMode;
+  document.getElementById('buildBar').style.display=buildMode?'flex':'none';
+  document.getElementById('buildMode').textContent=buildMode?'ON':'OFF';
+  document.getElementById('buildMode').style.color=buildMode?'#ffaa00':'#ffaa0088';
+}
+function tryBuild(wx,wy){
+  const tx=Math.floor(wx/TILE),ty=Math.floor(wy/TILE);
+  if(tx<1||ty<1||tx>=MAP_W-1||ty>=MAP_H-1) return;
+  const type=BUILD_TYPES[buildSelected];
+  if(type.tile===-1){map[ty][tx]=0;}
+  else{
+    if(map[ty][tx]===0) map[ty][tx]=type.tile;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════
+const TILE=64, MAP_W=34, MAP_H=26;
+let map=[],gameActive=false,paused=false,score=0,kills=0,wave=1;
+let frameCount=0,mouseX=0,mouseY=0;
+let shootCooldown=0,reloading=false,reloadTimer=0;
+let waveTimer=0,waveAnnounceTimer=0,bossSpawned=false;
+let adminMode=false;
+
+// Roll system
+let rolling=false,rollTimer=0,rollCooldown=0;
+const ROLL_DURATION=0.22, ROLL_COOLDOWN=2.5, ROLL_SPEED=700;
+let rollVx=0,rollVy=0;
+
+// ═══════════════════════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════════════════════
+function generateMap(){
+  map=Array.from({length:MAP_H},()=>Array(MAP_W).fill(0));
+  for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++){
+    if(x===0||y===0||x===MAP_W-1||y===MAP_H-1) map[y][x]=1;
+  }
+  // rooms
+  [[5,3,7,6],[15,2,6,5],[24,4,7,5],[3,13,6,6],[13,14,7,5],[24,13,7,6],[8,8,5,5],[19,9,5,4]].forEach(([rx,ry,rw,rh])=>{
+    for(let y=ry;y<ry+rh;y++) for(let x=rx;x<rx+rw;x++) if(Math.random()<0.28) map[y][x]=1;
+  });
+  for(let i=0;i<45;i++){
+    const x=2+Math.floor(Math.random()*(MAP_W-4)),y=2+Math.floor(Math.random()*(MAP_H-4));
+    if(map[y][x]===0) map[y][x]=Math.random()<0.55?2:3;
+  }
+  for(let y=11;y<15;y++) for(let x=15;x<19;x++) map[y][x]=0;
+}
+
+function isSolid(wx,wy){const tx=Math.floor(wx/TILE),ty=Math.floor(wy/TILE);if(tx<0||ty<0||tx>=MAP_W||ty>=MAP_H)return true;return map[ty][tx]===1;}
+function isSolidOrCrate(wx,wy){const tx=Math.floor(wx/TILE),ty=Math.floor(wy/TILE);if(tx<0||ty<0||tx>=MAP_W||ty>=MAP_H)return true;return map[ty][tx]>=1;}
+
+// ═══════════════════════════════════════════════════════
+// PLAYER
+// ═══════════════════════════════════════════════════════
+const player={x:MAP_W/2*TILE,y:MAP_H/2*TILE,w:28,h:28,speed:185,hp:6,maxHp:6,angle:0,invTimer:0};
+
+// ═══════════════════════════════════════════════════════
+// ENEMIES
+// ═══════════════════════════════════════════════════════
+let enemies=[],playerBullets=[],enemyBullets=[],particles=[],pickups=[];
+
+function spawnEnemy(forceBoss=false,forceJustBoss=false){
+  let x,y,attempts=0;
+  do{
+    const edge=Math.floor(Math.random()*4);
+    if(edge===0){x=TILE*2+Math.random()*(MAP_W-4)*TILE;y=TILE*2;}
+    else if(edge===1){x=TILE*2+Math.random()*(MAP_W-4)*TILE;y=(MAP_H-2)*TILE;}
+    else if(edge===2){x=TILE*2;y=TILE*2+Math.random()*(MAP_H-4)*TILE;}
+    else{x=(MAP_W-2)*TILE;y=TILE*2+Math.random()*(MAP_H-4)*TILE;}
+    attempts++;
+  }while((isSolid(x,y)||Math.hypot(x-player.x,y-player.y)<220)&&attempts<40);
+
+  // Big Bro Boris (wave boss every 5 waves)
+  const isBBB=forceBoss||(wave%5===0&&!bossSpawned&&!forceJustBoss);
+  // Suicide boss (from 67 command)
+  const isSuicide=forceJustBoss;
+  // Regular mini-boss
+  const isMini=!isBBB&&!isSuicide&&Math.random()<wave*0.045;
+
+  const e={
+    x,y,
+    w:isBBB?72:isSuicide?80:isMini?36:26,
+    h:isBBB?72:isSuicide?80:isMini?36:26,
+    hp:isBBB?80:isSuicide?120:isMini?8:2+Math.floor(wave/3),
+    maxHp:isBBB?80:isSuicide?120:isMini?8:2+Math.floor(wave/3),
+    speed:isBBB?45:isSuicide?35:isMini?60:60+wave*7,
+    angle:0,
+    shootTimer:Math.random()*1.5,
+    shootInterval:isBBB?0.35:isSuicide?0.2:isMini?0.7:1.3-Math.min(wave*0.06,0.85),
+    bulletsPerShot:isBBB?4:isSuicide?6:isMini?2:1,
+    bulletSpeed:isBBB?280:isSuicide?320:isMini?320:290,
+    stunTimer:0,
+    wanderAngle:Math.random()*Math.PI*2,
+    wanderTimer:0,
+    isBBB,isSuicide,isMini,
+    // color
+    bodyColor:isBBB?'#00cccc':isSuicide?'#00cccc':'#2244dd',
+    headColor:isBBB?'#00cccc':isSuicide?'#00cccc':'#2244dd',
+    hatColor:isBBB?'#005588':isSuicide?'#003366':'#112299',
+    eyeColor:isBBB?'#ff0000':isSuicide?'#ff0000':'#ff6666',
+  };
+  if(isBBB){bossSpawned=true;}
+  enemies.push(e);
+}
+
+function spawnWave(n){
+  bossSpawned=false;
+  const isBossWave=n%5===0;
+  if(isBossWave) setTimeout(()=>spawnEnemy(true),500);
+  const count=isBossWave?4+n:3+n*2+(n>3?n:0);
+  for(let i=0;i<count;i++) setTimeout(()=>spawnEnemy(),i*280+(isBossWave?1200:0));
+}
+
+// ═══════════════════════════════════════════════════════
+// PARTICLES & PICKUPS
+// ═══════════════════════════════════════════════════════
+function spawnParticles(x,y,color,count,speed=90){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2,s=speed*0.5+Math.random()*speed;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,color,r:2+Math.random()*4});
+  }
+}
+function spawnBlood(x,y,n=8){spawnParticles(x,y,'#ff2020',n,100);spawnParticles(x,y,'#cc0000',n>>1,60);}
+function spawnExplosion(x,y){
+  spawnParticles(x,y,'#ff8800',30,200);spawnParticles(x,y,'#ffcc44',20,150);
+  spawnParticles(x,y,'#ff2200',15,120);
+  // shockwave hurts player
+  if(Math.hypot(player.x-x,player.y-y)<180&&player.invTimer<=0){
+    player.hp=Math.max(0,player.hp-3);player.invTimer=1;
+    updateHpHUD();
+    if(player.hp<=0) endGame('💥 CAUGHT IN THE EXPLOSION');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════════════════════
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.key]=true;
+  if(e.key==='p'||e.key==='P'){if(gameActive)togglePause();}
+  if(e.key==='r'||e.key==='R'){if(gameActive&&!paused)startReload();}
+  if(e.key==='f'||e.key==='F'){if(gameActive&&!paused)tryRoll();}
+  if(e.key==='b'||e.key==='B'){if(gameActive&&!paused)toggleBuildMode();}
+  if(e.key>='1'&&e.key<='5'){if(gameActive&&!paused)switchGun(parseInt(e.key)-1);}
+});
+document.addEventListener('keyup',e=>keys[e.key]=false);
+canvas.addEventListener('mousemove',e=>{mouseX=e.clientX;mouseY=e.clientY;});
+canvas.addEventListener('mousedown',e=>{
+  if(e.button===0){
+    keys['mouse']=true;
+    if(buildMode&&gameActive&&!paused) tryBuild(e.clientX+camX,e.clientY+camY);
+  }
+});
+canvas.addEventListener('mouseup',e=>{if(e.button===0)keys['mouse']=false;});
+
+// ═══════════════════════════════════════════════════════
+// SHOOTING
+// ═══════════════════════════════════════════════════════
+function tryShoot(){
+  if(!gameActive||paused||reloading||buildMode) return;
+  const g=guns[activeGun];
+  if(g.ammo<=0){startReload();return;}
+  if(shootCooldown>0) return;
+  g.ammo--;updateAmmoHUD();renderGunSlots();
+  shootCooldown=g.fireRate;
+  const wx=mouseX+camX,wy=mouseY+camY;
+  const base=Math.atan2(wy-player.y,wx-player.x);
+  for(let b=0;b<g.bulletsPerShot;b++){
+    const a=base+(Math.random()-0.5)*g.spread;
+    playerBullets.push({x:player.x+Math.cos(a)*22,y:player.y+Math.sin(a)*22,vx:Math.cos(a)*g.bulletSpeed,vy:Math.sin(a)*g.bulletSpeed,life:g.bulletLife,damage:g.damage});
+  }
+  spawnParticles(player.x+Math.cos(base)*22,player.y+Math.sin(base)*22,'#ffcc44',4,110);
+  if(g.ammo===0) setTimeout(startReload,150);
+}
+
+function startReload(){
+  const g=guns[activeGun];
+  if(reloading||g.reserve<=0||g.ammo===g.magSize) return;
+  reloading=true; reloadTimer=g.reloadTime;
+}
+
+// ═══════════════════════════════════════════════════════
+// ROLL
+// ═══════════════════════════════════════════════════════
+function tryRoll(){
+  if(rolling||rollCooldown>0) return;
+  rolling=true; rollTimer=ROLL_DURATION; rollCooldown=ROLL_COOLDOWN;
+  let dx=0,dy=0;
+  if(keys['ArrowLeft']||keys['a']||keys['A'])dx-=1;
+  if(keys['ArrowRight']||keys['d']||keys['D'])dx+=1;
+  if(keys['ArrowUp']||keys['w']||keys['W'])dy-=1;
+  if(keys['ArrowDown']||keys['s']||keys['S'])dy+=1;
+  if(dx===0&&dy===0){const a=player.angle;dx=Math.cos(a);dy=Math.sin(a);}
+  const len=Math.hypot(dx,dy)||1;
+  rollVx=dx/len*ROLL_SPEED; rollVy=dy/len*ROLL_SPEED;
+  spawnParticles(player.x,player.y,'#4cff4c',6,80);
+}
+
+// ═══════════════════════════════════════════════════════
+// CAMERA
+// ═══════════════════════════════════════════════════════
+let camX=0,camY=0;
+
+// ═══════════════════════════════════════════════════════
+// UPDATE
+// ═══════════════════════════════════════════════════════
+let lastTime=0;
+function update(ts){
+  if(!gameActive){requestAnimationFrame(update);return;}
+  if(paused){requestAnimationFrame(update);return;}
+  const dt=Math.min((ts-lastTime)/1000,0.05); lastTime=ts; frameCount++;
+
+  // Auto shoot on hold
+  if(keys['mouse']) tryShoot();
+
+  shootCooldown=Math.max(0,shootCooldown-dt);
+
+  // Reload
+  if(reloading){
+    reloadTimer-=dt;
+    if(reloadTimer<=0){
+      reloading=false;
+      const g=guns[activeGun];
+      const need=g.magSize-g.ammo,take=Math.min(need,g.reserve);
+      g.ammo+=take; g.reserve-=take;
+      updateAmmoHUD(); renderGunSlots();
+    }
+  }
+
+  // Roll
+  if(rolling){
+    rollTimer-=dt;
+    const r=player.w/2;
+    const nx=player.x+rollVx*dt,ny=player.y+rollVy*dt;
+    if(!isSolid(nx-r,player.y-r)&&!isSolid(nx+r,player.y-r)&&!isSolid(nx-r,player.y+r)&&!isSolid(nx+r,player.y+r)) player.x=nx;
+    if(!isSolid(player.x-r,ny-r)&&!isSolid(player.x+r,ny-r)&&!isSolid(player.x-r,ny+r)&&!isSolid(player.x+r,ny+r)) player.y=ny;
+    if(rollTimer<=0){rolling=false;}
+    spawnParticles(player.x,player.y,'#4cff4c88',2,40);
+  }
+
+  // Roll cooldown bar
+  rollCooldown=Math.max(0,rollCooldown-dt);
+  document.getElementById('rollBarFill').style.width=(1-rollCooldown/ROLL_COOLDOWN)*100+'%';
+
+  // Player movement (only when not rolling)
+  if(!rolling){
+    const sprint=keys['Shift'];
+    const spd=player.speed*(sprint?1.7:1)*dt;
+    let dx=0,dy=0;
+    if(keys['ArrowLeft']||keys['a']||keys['A'])dx-=1;
+    if(keys['ArrowRight']||keys['d']||keys['D'])dx+=1;
+    if(keys['ArrowUp']||keys['w']||keys['W'])dy-=1;
+    if(keys['ArrowDown']||keys['s']||keys['S'])dy+=1;
+    if(dx&&dy){dx*=0.707;dy*=0.707;}
+    const r=player.w/2;
+    const nx=player.x+dx*spd,ny=player.y+dy*spd;
+    if(!isSolid(nx-r,player.y-r)&&!isSolid(nx+r,player.y-r)&&!isSolid(nx-r,player.y+r)&&!isSolid(nx+r,player.y+r)) player.x=nx;
+    if(!isSolid(player.x-r,ny-r)&&!isSolid(player.x+r,ny-r)&&!isSolid(player.x-r,ny+r)&&!isSolid(player.x+r,ny+r)) player.y=ny;
+  }
+
+  player.angle=Math.atan2((mouseY+camY)-player.y,(mouseX+camX)-player.x);
+  player.invTimer=Math.max(0,player.invTimer-dt);
+
+  // Camera
+  camX+=(player.x-canvas.width/2-camX)*0.1;
+  camY+=(player.y-canvas.height/2-camY)*0.1;
+  camX=Math.max(0,Math.min(MAP_W*TILE-canvas.width,camX));
+  camY=Math.max(0,Math.min(MAP_H*TILE-canvas.height,camY));
+
+  // Update enemies
+  enemies.forEach(e=>{
+    if(e.stunTimer>0){e.stunTimer-=dt;return;}
+    const edx=player.x-e.x,edy=player.y-e.y,dist=Math.hypot(edx,edy);
+    e.angle=Math.atan2(edy,edx);
+    e.wanderTimer-=dt;
+    if(e.wanderTimer<0){e.wanderTimer=0.7+Math.random();e.wanderAngle+=(Math.random()-0.5)*1.4;}
+    const moveA=e.angle+(Math.random()-0.5)*0.1+(dist>100?0:(e.wanderAngle-e.angle)*0.2);
+    const es=e.speed*dt,er=e.w/2;
+    const enx=e.x+Math.cos(moveA)*es,eny=e.y+Math.sin(moveA)*es;
+    if(!isSolidOrCrate(enx-er,e.y-er)&&!isSolidOrCrate(enx+er,e.y-er)&&!isSolidOrCrate(enx-er,e.y+er)&&!isSolidOrCrate(enx+er,e.y+er)) e.x=enx;
+    else if(!isSolidOrCrate(e.x-er,eny-er)&&!isSolidOrCrate(e.x+er,eny-er)&&!isSolidOrCrate(e.x-er,eny+er)&&!isSolidOrCrate(e.x+er,eny+er)) e.y=eny;
+
+    if(dist<500){
+      e.shootTimer-=dt;
+      if(e.shootTimer<=0){
+        e.shootTimer=e.shootInterval*(0.8+Math.random()*0.4);
+        for(let b=0;b<e.bulletsPerShot;b++){
+          const spread=e.isBBB?0.15:e.isSuicide?0.08:e.isMini?0.12:0.2;
+          const sa=e.angle+(Math.random()-0.5)*spread+(b-(e.bulletsPerShot-1)/2)*0.15;
+          enemyBullets.push({x:e.x+Math.cos(sa)*e.w/2,y:e.y+Math.sin(sa)*e.w/2,vx:Math.cos(sa)*e.bulletSpeed,vy:Math.sin(sa)*e.bulletSpeed,life:1.5});
+        }
+      }
+    }
+  });
+
+  // Player bullets
+  playerBullets=playerBullets.filter(b=>{
+    b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
+    if(b.life<=0||isSolid(b.x,b.y)||isSolidOrCrate(b.x,b.y)){spawnParticles(b.x,b.y,'#ffcc44',3,50);return false;}
+    for(let i=enemies.length-1;i>=0;i--){
+      const e=enemies[i];
+      if(Math.hypot(b.x-e.x,b.y-e.y)<e.w/2+4){
+        e.hp-=(b.damage||1);e.stunTimer=0.06;
+        spawnBlood(b.x,b.y,e.isBBB?8:e.isSuicide?6:4);
+        if(e.hp<=0){
+          if(e.isSuicide){
+            // EXPLODES killing player too
+            spawnExplosion(e.x,e.y);
+            endGame('💥 SUICIDE BOSS EXPLOSION');
+          } else {
+            spawnBlood(e.x,e.y,e.isBBB?20:12);
+            kills++;
+            score+=e.isBBB?5000:e.isSuicide?2000:e.isMini?300:100;
+            document.getElementById('killDisplay').textContent=kills;
+            document.getElementById('scoreDisplay').textContent=score;
+            if(Math.random()<0.3) pickups.push({x:e.x,y:e.y,type:'ammo',life:15,bob:0});
+            if(Math.random()<0.15) pickups.push({x:e.x,y:e.y,type:'hp',life:15,bob:0});
+            enemies.splice(i,1);
+          }
+        }
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // Enemy bullets
+  enemyBullets=enemyBullets.filter(b=>{
+    b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
+    if(b.life<=0||isSolid(b.x,b.y)||isSolidOrCrate(b.x,b.y)){spawnParticles(b.x,b.y,'#4466ff',2,40);return false;}
+    // rolling player has no hitbox
+    if(!rolling&&player.invTimer<=0&&Math.hypot(b.x-player.x,b.y-player.y)<player.w/2+4){
+      player.hp=Math.max(0,player.hp-1);player.invTimer=0.5;
+      spawnBlood(player.x,player.y,5);updateHpHUD();
+      if(player.hp<=0){endGame();return false;}
+      return false;
+    }
+    return true;
+  });
+
+  particles=particles.filter(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=0.86;p.vy*=0.86;p.life-=dt*1.8;return p.life>0;});
+  pickups.forEach(p=>p.bob+=dt*3);
+  pickups=pickups.filter(p=>{
+    if(Math.hypot(p.x-player.x,p.y-player.y)<26){
+      if(p.type==='ammo'){guns.forEach(g=>g.reserve=Math.min(g.reserve+g.magSize,g.reserve*2+g.magSize));updateAmmoHUD();renderGunSlots();spawnParticles(p.x,p.y,'#ffdd44',5,70);}
+      else{player.hp=Math.min(player.maxHp,player.hp+2);updateHpHUD();spawnParticles(p.x,p.y,'#ff4444',5,70);}
+      return false;
+    }
+    p.life-=dt; return p.life>0;
+  });
+
+  // Wave
+  if(enemies.length===0){
+    waveTimer-=dt;
+    if(waveTimer<=0){
+      wave++;waveTimer=4;spawnWave(wave);
+      document.getElementById('waveDisplay').textContent=wave;
+      announceWave();
+    }
+  }
+  if(waveAnnounceTimer>0){waveAnnounceTimer-=dt;if(waveAnnounceTimer<=0)document.getElementById('waveAnnounce').style.display='none';}
+
+  draw();
+  requestAnimationFrame(update);
+}
+
+// ═══════════════════════════════════════════════════════
+// DRAW
+// ═══════════════════════════════════════════════════════
+function draw(){
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,W,H);
+  ctx.save();ctx.translate(-camX,-camY);
+
+  // Floor & walls
+  for(let y=0;y<MAP_H;y++) for(let x=0;x<MAP_W;x++){
+    const tx=x*TILE,ty=y*TILE,t=map[y][x];
+    if(t===0){
+      ctx.fillStyle=(x+y)%2===0?'#141414':'#111111';ctx.fillRect(tx,ty,TILE,TILE);
+      ctx.strokeStyle='rgba(255,255,255,.03)';ctx.lineWidth=1;ctx.strokeRect(tx,ty,TILE,TILE);
+    } else if(t===1){
+      ctx.fillStyle='#1a1a1a';ctx.fillRect(tx,ty,TILE,TILE);
+      ctx.fillStyle='#232323';ctx.fillRect(tx+2,ty+2,TILE-4,TILE-4);
+      ctx.fillStyle='#1d1d1d';
+      ctx.fillRect(tx+4,ty+4,28,28);ctx.fillRect(tx+34,ty+4,24,28);
+      ctx.fillRect(tx+4,ty+34,24,24);ctx.fillRect(tx+30,ty+34,28,24);
+      ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.strokeRect(tx,ty,TILE,TILE);
+    } else if(t===2){
+      ctx.fillStyle='#141414';ctx.fillRect(tx,ty,TILE,TILE);
+      ctx.fillStyle='#6a4818';ctx.fillRect(tx+6,ty+6,TILE-12,TILE-12);ctx.strokeStyle='#4a3010';ctx.lineWidth=2;ctx.strokeRect(tx+6,ty+6,TILE-12,TILE-12);
+      ctx.strokeStyle='#7a5828';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(tx+6,ty+TILE/2);ctx.lineTo(tx+TILE-6,ty+TILE/2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(tx+TILE/2,ty+6);ctx.lineTo(tx+TILE/2,ty+TILE-6);ctx.stroke();
+    } else if(t===3){
+      ctx.fillStyle='#141414';ctx.fillRect(tx,ty,TILE,TILE);
+      ctx.fillStyle='#2a2a2a';ctx.beginPath();ctx.arc(tx+TILE/2,ty+TILE/2,21,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#3a3a3a';ctx.lineWidth=3;ctx.stroke();
+      ctx.fillStyle='#333';ctx.beginPath();ctx.arc(tx+TILE/2,ty+TILE/2,11,0,Math.PI*2);ctx.fill();
+    }
+  }
+
+  // Build preview
+  if(buildMode){
+    const bx=Math.floor((mouseX+camX)/TILE)*TILE,by=Math.floor((mouseY+camY)/TILE)*TILE;
+    ctx.fillStyle='rgba(255,170,0,0.25)';ctx.fillRect(bx,by,TILE,TILE);
+    ctx.strokeStyle='#ffaa00';ctx.lineWidth=2;ctx.strokeRect(bx,by,TILE,TILE);
+  }
+
+  // Pickups
+  pickups.forEach(p=>{
+    const bob=Math.sin(p.bob)*4;
+    ctx.save();ctx.translate(p.x,p.y+bob);
+    if(p.type==='ammo'){
+      ctx.fillStyle='#ffdd44';ctx.strokeStyle='#aa8800';ctx.lineWidth=2;
+      ctx.fillRect(-11,-7,22,14);ctx.strokeRect(-11,-7,22,14);
+      ctx.fillStyle='#111';ctx.font='bold 9px Oswald';ctx.textAlign='center';ctx.fillText('AMMO',0,4);
+    } else {
+      ctx.font='20px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('❤️',0,0);
+    }
+    ctx.restore();
+  });
+
+  // Enemy bullets
+  enemyBullets.forEach(b=>{
+    ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));
+    ctx.fillStyle='#4466ff';ctx.shadowColor='#4466ff';ctx.shadowBlur=8;
+    ctx.fillRect(-8,-2.5,16,5);ctx.restore();
+  });
+
+  // Player bullets
+  playerBullets.forEach(b=>{
+    ctx.save();ctx.translate(b.x,b.y);ctx.rotate(Math.atan2(b.vy,b.vx));
+    const g=guns[activeGun];
+    ctx.fillStyle=g.color;ctx.shadowColor=g.color;ctx.shadowBlur=10;
+    const len=g.name==='SNIPER'?22:g.name==='MINIGUN'?8:12;
+    ctx.fillRect(-len,-2,len*2,4);ctx.restore();
+  });
+  ctx.shadowBlur=0;
+
+  // Particles
+  particles.forEach(p=>{ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fill();});
+  ctx.globalAlpha=1;
+
+  // Enemies
+  enemies.forEach(e=>drawMoaiDuck(e,false));
+
+  // Player (flash on invincibility, invisible when rolling)
+  const showPlayer=!rolling||(Math.floor(frameCount/3)%2===0);
+  if(showPlayer){
+    const playerE={x:player.x,y:player.y,w:player.w,angle:player.angle,hp:player.hp,maxHp:player.maxHp,bodyColor:'#44cc44',headColor:'#44cc44',hatColor:'#1a2a1a',eyeColor:'#00ff44',isBBB:false,isSuicide:false,isMini:false};
+    drawMoaiDuck(playerE,true);
+  }
+
+  // Roll trail
+  if(rolling) spawnParticles(player.x,player.y,'rgba(76,255,76,0.5)',1,30);
+
+  ctx.restore();
+
+  // Reload bar
+  if(reloading){
+    const prog=1-(reloadTimer/guns[activeGun].reloadTime);
+    ctx.fillStyle='rgba(0,0,0,.75)';ctx.fillRect(canvas.width/2-90,canvas.height-52,180,18);
+    ctx.fillStyle=guns[activeGun].color;ctx.fillRect(canvas.width/2-90,canvas.height-52,180*prog,18);
+    ctx.strokeStyle='#fff4';ctx.lineWidth=1;ctx.strokeRect(canvas.width/2-90,canvas.height-52,180,18);
+    ctx.fillStyle='#fff';ctx.font='12px Oswald';ctx.textAlign='center';ctx.fillText('RELOADING '+guns[activeGun].name,canvas.width/2,canvas.height-38);
+  }
+
+  // Crosshair
+  ctx.strokeStyle='rgba(76,255,76,0.85)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(mouseX-14,mouseY);ctx.lineTo(mouseX+14,mouseY);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(mouseX,mouseY-14);ctx.lineTo(mouseX,mouseY+14);ctx.stroke();
+  ctx.beginPath();ctx.arc(mouseX,mouseY,7,0,Math.PI*2);ctx.stroke();
+  if(buildMode){ctx.fillStyle='rgba(255,170,0,0.8)';ctx.beginPath();ctx.arc(mouseX,mouseY,4,0,Math.PI*2);ctx.fill();}
+}
+
+// ═══════════════════════════════════════════════════════
+// DRAW MOAI DUCK
+// ═══════════════════════════════════════════════════════
+function drawMoaiDuck(e,isPlayer){
+  const {x,y,angle,w,bodyColor,headColor,hatColor,eyeColor,isBBB,isSuicide,isMini,hp,maxHp}=e;
+  ctx.save();ctx.translate(x,y);
+  if(!isPlayer&&e.stunTimer>0) ctx.globalAlpha=0.6;
+  if(isPlayer&&player.invTimer>0&&Math.floor(frameCount/4)%2===0) ctx.globalAlpha=0.35;
+
+  const s=w/28; // scale
+  ctx.scale(s,s);
+
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.35)';ctx.beginPath();ctx.ellipse(3,6,18,11,0,0,Math.PI*2);ctx.fill();
+
+  // ── DUCK BODY ──
+  ctx.fillStyle=bodyColor;ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.lineWidth=2.5/s;
+  ctx.beginPath();ctx.ellipse(0,5,19,13,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+  // tail
+  ctx.fillStyle=bodyColor==='#44cc44'?'#2aa022':'#1a33aa';
+  ctx.beginPath();ctx.ellipse(14,3,7,5,0.4,0,Math.PI*2);ctx.fill();
+  // wing line
+  ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=2/s;
+  ctx.beginPath();ctx.ellipse(2,5,11,7,0.2,0,Math.PI);ctx.stroke();
+
+  // ── MOAI HEAD — same color as body ──
+  ctx.fillStyle=headColor;ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=2/s;
+  // main block
+  ctx.fillRect(-12,-24,24,22);ctx.strokeRect(-12,-24,24,22);
+  // brow overhang (darker version of body color)
+  ctx.fillStyle=darken(headColor,0.85);
+  ctx.fillRect(-13,-24,26,6);ctx.strokeRect(-13,-24,26,6);
+  // chin
+  ctx.fillStyle=headColor;
+  ctx.fillRect(-11,-3,22,5);ctx.strokeRect(-11,-3,22,5);
+  // nose ridge (lighter)
+  ctx.fillStyle=lighten(headColor,1.15);
+  ctx.fillRect(-3,-20,6,14);ctx.strokeRect(-3,-20,6,14);
+  // eye sockets
+  ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(-9,-20,6,6);ctx.fillRect(3,-20,6,6);
+  // glowing eyes
+  ctx.fillStyle=eyeColor;ctx.shadowColor=eyeColor;ctx.shadowBlur=8;
+  ctx.fillRect(-8,-19,4,4);ctx.fillRect(4,-19,4,4);
+  ctx.shadowBlur=0;
+  // ear tabs (body color)
+  ctx.fillStyle=darken(headColor,0.7);
+  ctx.fillRect(-15,-18,3,7);ctx.fillRect(12,-18,3,7);
+  // lips
+  ctx.fillStyle='rgba(0,0,0,0.35)';ctx.fillRect(-6,-8,12,2);
+
+  // ── TOP HAT ──
+  ctx.fillStyle=hatColor;ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.lineWidth=2/s;
+  ctx.fillRect(-15,-28,30,5);ctx.strokeRect(-15,-28,30,5); // brim
+  ctx.fillRect(-10,-46,20,19);ctx.strokeRect(-10,-46,20,19); // crown
+  // hat band
+  ctx.fillStyle=isPlayer?'#4cff4c':isBBB?'#00ffff':isSuicide?'#ff0000':'#2244ff';
+  ctx.fillRect(-10,-33,20,3);
+  // crown top
+  ctx.fillStyle=hatColor;ctx.fillRect(-10,-47,20,3);
+
+  // ── GUN ──
+  ctx.save();ctx.rotate(angle);
+  if(isPlayer){
+    drawGunSprite(ctx,guns[activeGun].name,1/s);
+  } else if(isBBB){
+    // Big Bro Boris — giant AK
+    ctx.fillStyle='#2a1a08';ctx.strokeStyle='#111';ctx.lineWidth=1.5/s;
+    ctx.fillRect(10,-5,38,9);ctx.fillRect(10,-5,22,9);ctx.strokeRect(10,-5,38,9);
+    ctx.fillStyle='#444';ctx.fillRect(10,-7,14,5);
+    ctx.fillStyle='#2a1a08';ctx.fillRect(26,4,12,18);ctx.strokeRect(26,4,12,18);
+    ctx.fillRect(42,-4,10,5);ctx.fillRect(10,-9,8,5);
+    ctx.strokeStyle='#00cccc';ctx.lineWidth=2/s;ctx.shadowColor='#00cccc';ctx.shadowBlur=10;ctx.strokeRect(10,-5,38,9);ctx.shadowBlur=0;
+  } else if(isSuicide){
+    // Suicide boss — dual massive guns
+    ctx.fillStyle='#333';ctx.strokeStyle='#666';ctx.lineWidth=1.5/s;
+    ctx.fillRect(10,-7,36,8);ctx.fillRect(10,-12,36,8);ctx.strokeRect(10,-7,36,8);ctx.strokeRect(10,-12,36,8);
+    ctx.strokeStyle='#ff0000';ctx.lineWidth=2/s;ctx.shadowColor='#ff0000';ctx.shadowBlur=12;
+    ctx.strokeRect(10,-7,36,8);ctx.strokeRect(10,-12,36,8);ctx.shadowBlur=0;
+  } else if(isMini){
+    ctx.fillStyle='#4a3010';ctx.strokeStyle='#222';ctx.lineWidth=1.5/s;
+    ctx.fillRect(10,-4,30,8);ctx.fillRect(10,-4,20,8);ctx.strokeRect(10,-4,30,8);
+    ctx.fillStyle='#333';ctx.fillRect(22,4,10,14);ctx.strokeRect(22,4,10,14);
+    ctx.fillRect(38,-3,8,5);ctx.fillRect(10,-7,7,4);
+  } else {
+    // Normal AK
+    ctx.fillStyle='#4a3010';ctx.strokeStyle='#222';ctx.lineWidth=1.5/s;
+    ctx.fillRect(9,-3,26,7);ctx.fillRect(9,-3,16,7);ctx.strokeRect(9,-3,26,7);
+    ctx.fillStyle='#333';ctx.fillRect(19,4,9,12);ctx.strokeRect(19,4,9,12);
+    ctx.fillRect(33,-3,8,4);ctx.fillRect(9,-6,6,4);
+  }
+  ctx.restore();
+
+  // ── BEAK ──
+  ctx.save();ctx.rotate(angle);
+  ctx.fillStyle=isPlayer?'#e87010':'#ff4455';ctx.strokeStyle='#aa3300';ctx.lineWidth=1.5/s;
+  ctx.beginPath();ctx.moveTo(18,-4);ctx.lineTo(25,-1);ctx.lineTo(18,2);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.restore();
+
+  // HP bar (non-player)
+  if(!isPlayer&&hp<maxHp){
+    ctx.fillStyle='#222';ctx.fillRect(-18,-56,36,6);
+    ctx.fillStyle=hp/maxHp>0.5?'#4cff4c':'#ff4444';
+    ctx.fillRect(-18,-56,36*(hp/maxHp),6);
+    ctx.strokeStyle='#000';ctx.lineWidth=1/s;ctx.strokeRect(-18,-56,36,6);
+  }
+
+  // BBB crown
+  if(isBBB){
+    ctx.font=(24/s)+'px serif';ctx.textAlign='center';
+    ctx.shadowColor='#ffcc00';ctx.shadowBlur=12;ctx.fillText('👑',0,-56);ctx.shadowBlur=0;
+    ctx.font='bold '+(10/s)+'px Oswald';ctx.fillStyle='#00cccc';
+    ctx.fillText('BIG BRO BORIS',0,-64);
+  }
+  if(isSuicide){
+    ctx.font=(18/s)+'px serif';ctx.textAlign='center';
+    ctx.shadowColor='#ff0000';ctx.shadowBlur=10;ctx.fillText('💀',0,-56);ctx.shadowBlur=0;
+  }
+
+  ctx.restore();
+}
+
+function drawGunSprite(ctx, name, invS){
+  ctx.strokeStyle='#000';ctx.lineWidth=1.5*invS;
+  switch(name){
+    case 'PISTOL':
+      ctx.fillStyle='#888';ctx.fillRect(9,-3,22,6);ctx.strokeRect(9,-3,22,6);
+      ctx.fillStyle='#666';ctx.fillRect(11,3,7,8);ctx.strokeRect(11,3,7,8);
+      ctx.fillStyle='#aaa';ctx.fillRect(25,-2,6,2);break;
+    case 'SHOTGUN':
+      ctx.fillStyle='#c87020';ctx.fillRect(8,-4,30,8);ctx.strokeRect(8,-4,30,8);
+      ctx.fillStyle='#aa5010';ctx.fillRect(8,-4,14,8);
+      ctx.fillStyle='#888';ctx.fillRect(36,-3,8,6);ctx.fillRect(38,-5,4,10);
+      ctx.strokeStyle='#c87020';ctx.lineWidth=2*invS;ctx.strokeRect(8,-4,30,8);break;
+    case 'AK-47':
+      ctx.fillStyle='#4a3010';ctx.fillRect(9,-3,28,7);ctx.strokeRect(9,-3,28,7);
+      ctx.fillStyle='#333';ctx.fillRect(9,-3,18,7);
+      ctx.fillStyle='#3a2008';ctx.fillRect(21,4,10,13);ctx.strokeRect(21,4,10,13);
+      ctx.fillStyle='#555';ctx.fillRect(35,-4,8,4);ctx.fillRect(9,-6,7,4);break;
+    case 'SNIPER':
+      ctx.fillStyle='#336688';ctx.fillRect(7,-3,44,6);ctx.strokeRect(7,-3,44,6);
+      ctx.fillStyle='#224466';ctx.fillRect(7,-3,20,6);
+      ctx.fillStyle='#888';ctx.fillRect(51,-2,8,4);
+      ctx.fillStyle='#aaccdd';ctx.fillRect(16,-5,8,3);// scope
+      ctx.fillRect(20,-8,2,12);ctx.strokeStyle='#446688';ctx.strokeRect(16,-8,10,14);break;
+    case 'MINIGUN':
+      ctx.fillStyle='#666';ctx.fillRect(8,-5,32,10);ctx.strokeRect(8,-5,32,10);
+      ctx.fillStyle='#888';
+      for(let b=0;b<4;b++) ctx.fillRect(8,-4+b*3,32,2);
+      ctx.fillStyle='#aaa';ctx.fillRect(38,-4,6,8);
+      ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.arc(11,0,4,0,Math.PI*2);ctx.fill();
+      ctx.shadowColor='#ffaa00';ctx.shadowBlur=8;ctx.fill();ctx.shadowBlur=0;break;
+  }
+}
+
+// Color helpers
+function darken(hex,f){
+  const r=parseInt(hex.slice(1,3),16)*f|0,g=parseInt(hex.slice(3,5),16)*f|0,b=parseInt(hex.slice(5,7),16)*f|0;
+  return `rgb(${Math.min(255,r)},${Math.min(255,g)},${Math.min(255,b)})`;
+}
+function lighten(hex,f){return darken(hex,f);}
+
+// ═══════════════════════════════════════════════════════
+// HUD
+// ═══════════════════════════════════════════════════════
+function updateHpHUD(){
+  document.getElementById('healthBar').innerHTML='';
+  for(let i=0;i<player.maxHp;i++){
+    const h=document.createElement('span');
+    h.style.fontSize='17px';
+    h.textContent=i<player.hp?'🦆':'💀';
+    document.getElementById('healthBar').appendChild(h);
+  }
+}
+function updateAmmoHUD(){
+  const g=guns[activeGun];
+  document.getElementById('ammoDisplay').textContent=`${g.ammo} / ${g.reserve}`;
+}
+function announceWave(){
+  const el=document.getElementById('waveAnnounce');
+  const isBoss=wave%5===0;
+  el.innerHTML=isBoss?`<span style="color:#00cccc">WAVE ${wave}<br><span style="font-size:.6em">⚠ BIG BRO BORIS INCOMING ⚠</span></span>`:`WAVE ${wave}`;
+  el.style.display='block';waveAnnounceTimer=2.5;
+}
+
+// ═══════════════════════════════════════════════════════
+// PAUSE & CONSOLE
+// ═══════════════════════════════════════════════════════
+function togglePause(){
+  paused=!paused;
+  document.getElementById('pauseMenu').style.display=paused?'flex':'none';
+  if(!paused) lastTime=performance.now();
+}
+function openConsole(){
+  document.getElementById('pauseMenu').style.display='none';
+  document.getElementById('consolePanel').style.display='flex';
+  document.getElementById('consoleInputField').focus();
+}
+function closeConsole(){
+  document.getElementById('consolePanel').style.display='none';
+  document.getElementById('pauseMenu').style.display='flex';
+}
+
+let consoleHistory=[];
+function consoleLog(text,color='#4cff4c'){
+  const el=document.getElementById('consoleLog');
+  const line=document.createElement('div');
+  line.style.color=color;
+  line.textContent='> '+text;
+  el.appendChild(line);
+  el.scrollTop=el.scrollHeight;
+}
+
+document.getElementById('consoleInputField').addEventListener('keydown',e=>{if(e.key==='Enter')runConsoleCmd();});
+
+function runConsoleCmd(){
+  const input=document.getElementById('consoleInputField');
+  const cmd=input.value.trim();
+  input.value='';
+  if(!cmd) return;
+  consoleLog('$ '+cmd,'#888');
+  consoleHistory.push(cmd);
+
+  const c=cmd.toLowerCase();
+
+  if(c==='67sucks'){
+    adminMode=true;
+    consoleLog('🔓 ADMIN MODE ACTIVATED','#ffcc00');
+    consoleLog('Welcome, admin. All commands unlocked.','#ffcc00');
+    consoleLog('Commands: godmode | allguns | killall | spawnboss | wave <n> | hp <n> | score <n> | clearmap | help','#888');
+    return;
+  }
+  if(c==='67'){
+    consoleLog('...','#ff4444');
+    consoleLog('You typed 67 without the magic word.','#ff4444');
+    consoleLog('Consequence incoming.','#ff4444');
+    setTimeout(()=>{
+      consoleLog('Summoning mafia bosses...','#ff0000');
+      for(let i=0;i<6;i++) setTimeout(()=>spawnEnemy(false,true),i*400);
+    },1000);
+    return;
+  }
+
+  if(!adminMode){
+    consoleLog('Access denied. Hint: you need the magic phrase.','#ff4444');
+    return;
+  }
+
+  // Admin commands
+  if(c==='godmode'){player.invTimer=99999;consoleLog('GOD MODE: invincibility permanent (until hit)','#ffcc00');return;}
+  if(c==='allguns'){guns.forEach(g=>{g.ammo=g.magSize;g.reserve=9999;});renderGunSlots();updateAmmoHUD();consoleLog('All guns fully loaded.','#ffcc00');return;}
+  if(c==='killall'){enemies.forEach(e=>spawnBlood(e.x,e.y,10));enemies=[];consoleLog('All enemies eliminated.','#ffcc00');return;}
+  if(c==='spawnboss'){spawnEnemy(true);consoleLog('Big Bro Boris summoned.','#00cccc');return;}
+  if(c.startsWith('wave ')){const n=parseInt(c.split(' ')[1]);if(!isNaN(n)){wave=n;spawnWave(wave);document.getElementById('waveDisplay').textContent=wave;consoleLog('Jumped to wave '+n,'#ffcc00');}return;}
+  if(c.startsWith('hp ')){const n=parseInt(c.split(' ')[1]);if(!isNaN(n)){player.hp=Math.max(1,Math.min(player.maxHp*3,n));player.maxHp=Math.max(player.maxHp,n);updateHpHUD();consoleLog('HP set to '+n,'#ffcc00');}return;}
+  if(c.startsWith('score ')){const n=parseInt(c.split(' ')[1]);if(!isNaN(n)){score=n;document.getElementById('scoreDisplay').textContent=n;consoleLog('Score set to '+n,'#ffcc00');}return;}
+  if(c==='clearmap'){for(let y=1;y<MAP_H-1;y++)for(let x=1;x<MAP_W-1;x++)map[y][x]=0;consoleLog('Map cleared.','#ffcc00');return;}
+  if(c==='spawnsuicide'){for(let i=0;i<4;i++)spawnEnemy(false,true);consoleLog('Suicide bosses summoned. Good luck.','#ff0000');return;}
+  if(c==='noclip'){rolling=true;rollTimer=9999;consoleLog('Noclip enabled (you are permanently rolling).','#ffcc00');return;}
+  if(c==='help'){
+    ['godmode — permanent invincibility','allguns — max ammo all guns','killall — kill all enemies','spawnboss — spawn Big Bro Boris','spawnsuicide — spawn suicide bosses','wave <n> — jump to wave','hp <n> — set HP','score <n> — set score','clearmap — remove all obstacles','noclip — permanent roll (no hitbox)'].forEach(l=>consoleLog(l,'#4cff4c'));
+    return;
+  }
+  consoleLog('Unknown command. Type help for list.','#ff4444');
+}
+
+// ═══════════════════════════════════════════════════════
+// GAME FLOW
+// ═══════════════════════════════════════════════════════
+function startGame(){
+  document.getElementById('titleScreen').style.display='none';
+  document.getElementById('gameOver').style.display='none';
+  document.getElementById('pauseMenu').style.display='none';
+  document.getElementById('consolePanel').style.display='none';
+  document.getElementById('hud').style.display='flex';
+  document.getElementById('rollLabel').style.display='block';
+  document.getElementById('rollBar').style.display='block';
+
+  generateMap();
+  initGuns();
+  initBuildBar();
+  score=0;kills=0;wave=0;waveTimer=1;bossSpawned=false;adminMode=false;
+  player.x=MAP_W/2*TILE;player.y=MAP_H/2*TILE;
+  player.hp=player.maxHp=6;player.invTimer=0;
+  enemies.length=0;playerBullets.length=0;enemyBullets.length=0;
+  particles.length=0;pickups.length=0;
+  reloading=false;reloadTimer=0;shootCooldown=0;
+  rolling=false;rollTimer=0;rollCooldown=0;
+  paused=false;buildMode=false;
+  camX=player.x-canvas.width/2;camY=player.y-canvas.height/2;
+  document.getElementById('killDisplay').textContent='0';
+  document.getElementById('scoreDisplay').textContent='0';
+  document.getElementById('waveDisplay').textContent='1';
+  document.getElementById('buildMode').textContent='OFF';
+  document.getElementById('buildBar').style.display='none';
+  updateHpHUD();updateAmmoHUD();
+  document.getElementById('consoleLog').innerHTML='';
+  consoleLog('Console initialized. Type 67sucks to unlock admin commands.','#446644');
+  gameActive=true;lastTime=performance.now();
+  requestAnimationFrame(update);
+}
+
+function endGame(msg='YOU DIED'){
+  gameActive=false;
+  document.getElementById('gameOver').style.display='flex';
+  document.getElementById('deathTitle').textContent=msg;
+  document.getElementById('finalScore').textContent='Score: '+score;
+  document.getElementById('finalKills').textContent='Kills: '+kills;
+  document.getElementById('hud').style.display='none';
+  document.getElementById('rollLabel').style.display='none';
+  document.getElementById('rollBar').style.display='none';
+  document.getElementById('gunSlots').innerHTML='';
+}
+</script>
+</body>
+</html>

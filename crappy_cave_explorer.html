@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crappy Cave Explorer</title>
+    <style>
+        body { margin: 0; background: #050505; color: white; font-family: monospace; overflow: hidden; user-select: none; }
+        canvas { display: block; image-rendering: pixelated; }
+        #ui { position: absolute; top: 10px; left: 10px; pointer-events: none; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border: 1px solid #333; text-shadow: 1px 1px 0 #000; }
+        #chatBox { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 5px; color: #00ff88; font-size: 18px; display: none; border: 1px solid #00ff88; pointer-events: none; }
+        #achievements { position: absolute; top: 10px; right: 10px; text-align: right; pointer-events: none; }
+        .ach { background: rgba(255,215,0,0.2); padding: 10px; margin-bottom: 5px; border: 1px solid gold; color: gold; font-weight: bold; }
+        .hotkey { color: #aaa; margin-right: 15px; }
+        .active { color: #00ff88; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div id="ui">
+    <h2>Crappy Cave Explorer</h2>
+    Parts: <span id="partsUI" style="color:#aaa;">10</span> | 
+    Gold: <span id="goldUI" style="color:#ffd700;">0</span> | 
+    Emeralds: <span id="emeraldsUI" style="color:#00ff55;">0</span><br><br>
+    <small>Left Click: Mine | Right Click: Grapple | B: Build | F: Talk</small><br><br>
+    <span class="hotkey active" id="sel1">[1] Block (1)</span>
+    <span class="hotkey" id="sel2">[2] Ladder (2)</span><br><br>
+    <span class="hotkey" id="sel3">[3] Torch (2)</span>
+    <span class="hotkey" id="sel4">[4] Bounce (3)</span>
+</div>
+<div id="chatBox">...</div>
+<div id="achievements"></div>
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+// Create an off-screen canvas for the lighting layer
+const lightCanvas = document.createElement('canvas');
+const lightCtx = lightCanvas.getContext('2d');
+lightCanvas.width = canvas.width;
+lightCanvas.height = canvas.height;
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    lightCanvas.width = canvas.width; lightCanvas.height = canvas.height;
+});
+
+const zoom = 2;
+const size = 40; 
+let p = { x: 0, y: 0, vx: 0, vy: 0, w: 16, h: 16, parts: 10, gold: 0, emeralds: 0, hook: null };
+let keys = {};
+let mouse = { x: canvas.width/2, y: canvas.height/2, leftDown: false, rightDown: false };
+let buildSelection = 1;
+
+let blocks = new Map();
+let entities = []; 
+let lights = [];
+let achs = [];
+
+const dialogues = ["I miss my frog :(", "Work is hard...", "Found any gold?", "I think I'm lost.", "Don't tell the boss I'm sleeping.", "Watch out for the skeletons deeper down.", "Crappy cave, am I right?"];
+
+// Prevent right-click menu
+window.addEventListener('contextmenu', e => e.preventDefault());
+
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if(['Digit1','Digit2','Digit3','Digit4'].includes(e.code)) {
+        buildSelection = parseInt(e.code.replace('Digit',''));
+        for(let i=1; i<=4; i++) document.getElementById('sel'+i).className = (i===buildSelection) ? 'hotkey active' : 'hotkey';
+    }
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mousedown', e => {
+    if (e.button === 0) mouse.leftDown = true;
+    if (e.button === 2) {
+        let mx = (e.clientX - canvas.width/2)/zoom + p.x + p.w/2;
+        let my = (e.clientY - canvas.height/2)/zoom + p.y + p.h/2;
+        p.hook = { x: mx, y: my };
+    }
+});
+window.addEventListener('mouseup', e => {
+    if (e.button === 0) mouse.leftDown = false;
+    if (e.button === 2) p.hook = null;
+});
+
+function addAch(name) {
+    if(achs.includes(name)) return;
+    achs.push(name);
+    let el = document.createElement('div');
+    el.className = 'ach'; el.innerText = "ACHIEVEMENT: " + name;
+    document.getElementById('achievements').appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+}
+
+function getBiome(y) {
+    if (y < 2000) return { id: 0, color: '#222' };
+    if (y < 5000) return { id: 1, color: '#1a2a1a' };
+    if (y < 8000) return { id: 2, color: '#3a3a1a' };
+    return { id: 3, color: '#3a1a1a' };
+}
+
+// Upgraded Terrain Generation (Variable Noise)
+function generateArea(px, py) {
+    let sx = Math.floor((px - 1200) / size) * size;
+    let ex = Math.floor((px + 1200) / size) * size;
+    let sy = Math.floor((py - 1000) / size) * size;
+    let ey = Math.floor((py + 1000) / size) * size;
+
+    for(let tx = sx; tx < ex; tx += size) {
+        for(let ty = sy; ty < ey; ty += size) {
+            let key = `${tx},${ty}`;
+            if (blocks.has(key)) continue;
+
+            // Layered noise for large caverns + tight tunnels
+            let val = Math.sin(tx * 0.015) + Math.cos(ty * 0.015) + Math.sin((tx - ty) * 0.004) * 1.8;
+            if (Math.hypot(tx, ty) < 300) val = -1; // Clear spawn
+
+            if (val > 0.4) {
+                let biome = getBiome(ty);
+                let type = 'rock';
+                
+                // Loot Generation
+                let r = Math.random();
+                if (r > 0.985) type = 'emerald';
+                else if (r > 0.95) type = 'gold';
+                else if (r > 0.90 && biome.id === 0) type = 'fossil';
+
+                blocks.set(key, { type: type, color: biome.color });
+            } else {
+                blocks.set(key, { type: 'air' }); 
+
+                if (Math.random() < 0.003 && Math.hypot(tx, ty) > 400) {
+                    if (Math.random() > 0.6) {
+                        entities.push({ x: tx, y: ty, vx: (Math.random()>0.5?1:-1), vy: 0, w: 18, h: 18, type: 'miner', say: dialogues[Math.floor(Math.random()*dialogues.length)] });
+                    } else {
+                        entities.push({ x: tx, y: ty, vx: (Math.random()>0.5?1:-1), vy: 0, w: 18, h: 20, type: 'skeleton' });
+                    }
+                }
+            }
+        }
+    }
+}
+
+function intersect(r1, r2) { return r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y; }
+
+function applyPhysics(obj, isPlayer) {
+    obj.x += obj.vx;
+    blocks.forEach((t, key) => {
+        if (t.type === 'air' || t.type === 'ladder' || t.type === 'torch') return;
+        let [tx, ty] = key.split(',').map(Number);
+        if (intersect(obj, {x:tx, y:ty, w:size, h:size})) {
+            if (obj.vx > 0) obj.x = tx - obj.w;
+            else if (obj.vx < 0) obj.x = tx + size;
+            obj.vx = (isPlayer) ? 0 : -obj.vx; 
+        }
+    });
+
+    let climbingLadder = false;
+    if (isPlayer) {
+        blocks.forEach((t, key) => {
+            if (t.type === 'ladder') {
+                let [tx, ty] = key.split(',').map(Number);
+                if (intersect(obj, {x:tx, y:ty, w:size, h:size})) climbingLadder = true;
+            }
+        });
+    }
+
+    if (climbingLadder && (keys['KeyW'] || keys['KeyS'])) {
+        obj.vy = keys['KeyW'] ? -4 : 4;
+        obj.vx *= 0.5; 
+    } else {
+        obj.vy += 0.5; // Gravity
+    }
+
+    obj.y += obj.vy;
+    let onGround = false;
+    blocks.forEach((t, key) => {
+        if (t.type === 'air' || t.type === 'ladder' || t.type === 'torch') return;
+        let [tx, ty] = key.split(',').map(Number);
+        if (intersect(obj, {x:tx, y:ty, w:size, h:size})) {
+            if (obj.vy > 0) {
+                obj.y = ty - obj.h; obj.vy = 0; onGround = true;
+                if (t.type === 'bounce' && isPlayer) { obj.vy = -16; onGround = false; }
+            } else if (obj.vy < 0) {
+                obj.y = ty + size; obj.vy = 0;
+            }
+        }
+    });
+
+    return onGround;
+}
+
+function loop() {
+    generateArea(p.x, p.y);
+
+    if (keys['ArrowLeft'] || keys['KeyA']) p.vx -= 0.8;
+    else if (keys['ArrowRight'] || keys['KeyD']) p.vx += 0.8;
+    p.vx *= 0.8; 
+
+    if (p.hook) {
+        let dx = p.hook.x - (p.x + p.w/2); let dy = p.hook.y - (p.y + p.h/2);
+        let dist = Math.hypot(dx, dy);
+        if (dist > 10) { p.vx += (dx/dist)*1.5; p.vy += (dy/dist)*1.5; }
+    }
+
+    let onGround = applyPhysics(p, true);
+    if (onGround && (keys['Space'] || keys['KeyW'])) p.vy = -9;
+
+    let targetX = Math.floor(((mouse.x - canvas.width/2)/zoom + p.x + p.w/2) / size) * size;
+    let targetY = Math.floor(((mouse.y - canvas.height/2)/zoom + p.y + p.h/2) / size) * size;
+    let targetKey = `${targetX},${targetY}`;
+
+    // Mine (Left Click Continuous)
+    if (mouse.leftDown) {
+        let t = blocks.get(targetKey);
+        if (t && t.type !== 'air') {
+            if (t.type === 'gold') p.gold += 1;
+            else if (t.type === 'emerald') p.emeralds += 1;
+            else if (t.type === 'fossil') p.parts += 5;
+            else if (t.type !== 'torch') p.parts += 1; 
+
+            blocks.set(targetKey, { type: 'air' });
+            
+            document.getElementById('partsUI').innerText = p.parts;
+            document.getElementById('goldUI').innerText = p.gold;
+            document.getElementById('emeraldsUI').innerText = p.emeralds;
+            
+            if (t.type === 'torch') lights = lights.filter(l => l.x !== targetX + size/2 || l.y !== targetY + size/2);
+        }
+    }
+
+    // Build (B)
+    if (keys['KeyB']) {
+        let t = blocks.get(targetKey);
+        if (t && t.type === 'air') {
+            let costs = {1: 1, 2: 2, 3: 2, 4: 3}; 
+            if (p.parts >= costs[buildSelection]) {
+                let types = {1: 'block', 2: 'ladder', 3: 'torch', 4: 'bounce'};
+                blocks.set(targetKey, { type: types[buildSelection], color: '#555' });
+                p.parts -= costs[buildSelection];
+                document.getElementById('partsUI').innerText = p.parts;
+                if (buildSelection === 3) lights.push({x: targetX + size/2, y: targetY + size/2});
+            }
+        }
+    }
+
+    let chatMsg = null;
+    entities = entities.filter(e => {
+        applyPhysics(e, false);
+        let dist = Math.hypot(p.x - e.x, p.y - e.y);
+        
+        if (e.type === 'miner' && dist < 120) {
+            chatMsg = "Press F to talk to Miner";
+            if(keys['KeyF']) chatMsg = "Miner: '" + e.say + "'";
+        }
+
+        if (e.type === 'skeleton' && intersect(p, e)) {
+            if (p.vy > 0 && p.y < e.y) {
+                p.vy = -7; p.parts += 3; 
+                document.getElementById('partsUI').innerText = p.parts;
+                return false; 
+            } else {
+                p.vx = (p.x < e.x) ? -8 : 8; p.vy = -4; 
+                addAch("Spooky Scary Skeletons"); // Achievement trigger
+            }
+        }
+        return Math.hypot(p.x - e.x, p.y - e.y) < 2500; 
+    });
+
+    let chatEl = document.getElementById('chatBox');
+    if (chatMsg) { chatEl.innerText = chatMsg; chatEl.style.display = 'block'; }
+    else { chatEl.style.display = 'none'; }
+
+    // Death triggers
+    if (p.y > 6000) { addAch("La-la-la-lava,chi-chi-chi-chicken"); p.y = 0; p.vx = 0; p.vy = 0; }
+
+    // --- RENDERING ---
+    ctx.fillStyle = '#050505'; ctx.fillRect(0,0, canvas.width, canvas.height);
+    
+    ctx.save();
+    ctx.translate(canvas.width/2 - p.x*zoom, canvas.height/2 - p.y*zoom);
+    ctx.scale(zoom, zoom);
+
+    blocks.forEach((t, key) => {
+        if (t.type === 'air') return;
+        let [tx, ty] = key.split(',').map(Number);
+        
+        if (t.type === 'rock') { ctx.fillStyle = t.color; ctx.fillRect(tx, ty, size, size); }
+        else if (t.type === 'gold') { ctx.fillStyle = t.color; ctx.fillRect(tx, ty, size, size); ctx.fillStyle='#ffd700'; ctx.fillRect(tx+10, ty+10, 10, 10); ctx.fillRect(tx+25, ty+20, 8, 8); }
+        else if (t.type === 'emerald') { ctx.fillStyle = t.color; ctx.fillRect(tx, ty, size, size); ctx.fillStyle='#00ff55'; ctx.fillRect(tx+15, ty+10, 10, 15); }
+        else if (t.type === 'fossil') { ctx.fillStyle = t.color; ctx.fillRect(tx, ty, size, size); ctx.fillStyle='#eee'; ctx.fillRect(tx+10, ty+10, 20, 5); ctx.fillRect(tx+15, ty+15, 5, 10); }
+        
+        else if (t.type === 'block') { ctx.fillStyle = '#644'; ctx.fillRect(tx, ty, size, size); }
+        else if (t.type === 'ladder') { ctx.fillStyle = '#852'; ctx.fillRect(tx+10, ty, 5, size); ctx.fillRect(tx+25, ty, 5, size); ctx.fillRect(tx+10, ty+10, 20, 4); ctx.fillRect(tx+10, ty+25, 20, 4); }
+        else if (t.type === 'bounce') { ctx.fillStyle = '#0088ff'; ctx.fillRect(tx, ty+30, size, 10); ctx.fillStyle='#fff'; ctx.fillRect(tx+5, ty+25, 30, 5); }
+        else if (t.type === 'torch') { ctx.fillStyle = '#642'; ctx.fillRect(tx+16, ty+20, 8, 20); ctx.fillStyle='#f80'; ctx.fillRect(tx+14, ty+10, 12, 10); }
+    });
+
+    entities.forEach(e => {
+        if (e.type === 'miner') {
+            ctx.fillStyle = '#00ff88'; ctx.fillRect(e.x, e.y, e.w, e.h); 
+            ctx.fillStyle = '#00aa55'; ctx.fillRect(e.x - 2, e.y - 4, e.w + 4, 6); 
+            ctx.fillStyle = '#ffff00'; ctx.fillRect(e.x + e.w/2 - 3, e.y - 10, 6, 4); 
+        } else if (e.type === 'skeleton') {
+            ctx.fillStyle = '#fff'; ctx.fillRect(e.x+4, e.y, 10, 8); 
+            ctx.fillStyle = '#000'; ctx.fillRect(e.x+6, e.y+2, 2, 2); ctx.fillRect(e.x+10, e.y+2, 2, 2); 
+            ctx.fillStyle = '#fff'; ctx.fillRect(e.x+8, e.y+8, 2, 8); ctx.fillRect(e.x+2, e.y+10, 14, 2); ctx.fillRect(e.x+4, e.y+13, 10, 2); 
+        }
+    });
+
+    if (p.hook) { ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x+p.w/2, p.y+p.h/2); ctx.lineTo(p.hook.x, p.hook.y); ctx.stroke(); }
+    
+    // Player
+    ctx.fillStyle = '#ff2222'; ctx.fillRect(p.x, p.y, p.w, p.h);
+    
+    // Player Helmet
+    ctx.fillStyle = '#ffaa00'; ctx.fillRect(p.x - 2, p.y - 4, p.w + 4, 6); 
+    ctx.fillStyle = '#ffff00'; 
+    let facingRight = mouse.x > canvas.width/2;
+    if (facingRight) ctx.fillRect(p.x + p.w - 2, p.y - 8, 4, 4);
+    else ctx.fillRect(p.x - 2, p.y - 8, 4, 4);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; ctx.strokeRect(targetX, targetY, size, size);
+
+    ctx.restore();
+
+    // --- PROPER CUTOUT LIGHTING (Using Offscreen Canvas Layer) ---
+    
+    // 1. Fill the lighting layer with solid darkness
+    lightCtx.globalCompositeOperation = 'source-over';
+    lightCtx.fillStyle = 'rgba(10, 12, 15, 0.96)'; 
+    lightCtx.fillRect(0, 0, lightCanvas.width, lightCanvas.height);
+
+    // 2. Cut holes in the lighting layer
+    lightCtx.globalCompositeOperation = 'destination-out'; 
+    
+    let cx = canvas.width/2;
+    let cy = canvas.height/2;
+    
+    // Player Ambient Glow
+    let pg = lightCtx.createRadialGradient(cx, cy, 20, cx, cy, 200);
+    pg.addColorStop(0, 'rgba(255,255,255,1)'); 
+    pg.addColorStop(1, 'rgba(255,255,255,0)');
+    lightCtx.fillStyle = pg; 
+    lightCtx.beginPath(); lightCtx.arc(cx, cy, 200, 0, Math.PI*2); lightCtx.fill();
+
+    // Player Directional Headlamp
+    let angle = Math.atan2(mouse.y - cy, mouse.x - cx);
+    let hg = lightCtx.createRadialGradient(cx, cy, 50, cx, cy, 450); 
+    hg.addColorStop(0, 'rgba(255,255,255,1)');
+    hg.addColorStop(1, 'rgba(255,255,255,0)');
+    lightCtx.fillStyle = hg;
+    lightCtx.beginPath();
+    lightCtx.moveTo(cx, cy);
+    lightCtx.arc(cx, cy, 450, angle - 0.4, angle + 0.4); 
+    lightCtx.fill();
+
+    // Torch Lights
+    lights.forEach(l => {
+        let lx = canvas.width/2 + (l.x - p.x - p.w/2) * zoom;
+        let ly = canvas.height/2 + (l.y - p.y - p.h/2) * zoom;
+        
+        if (lx > -300 && lx < canvas.width+300 && ly > -300 && ly < canvas.height+300) {
+            let tg = lightCtx.createRadialGradient(lx, ly, 10, lx, ly, 250); 
+            tg.addColorStop(0, 'rgba(255,255,255,1)'); 
+            tg.addColorStop(1, 'rgba(255,255,255,0)');
+            lightCtx.fillStyle = tg; 
+            lightCtx.beginPath(); lightCtx.arc(lx, ly, 250, 0, Math.PI*2); lightCtx.fill();
+        }
+    });
+
+    // 3. Draw the resulting darkness mask over the main game
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(lightCanvas, 0, 0);
+
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

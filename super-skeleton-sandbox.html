@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Ultra Physics Sandbox - V12 Skull & Bones Edition</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { 
+            background: #030305; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            overflow: hidden;
+            color: #fff;
+        }
+
+        #top-bar {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            background: rgba(10, 10, 20, 0.95);
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.8);
+            z-index: 10;
+            border: 1px solid #1f3a52;
+        }
+
+        button {
+            background: #1f3a52;
+            color: white;
+            border: 1px solid #2c5275;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        button:hover { background: #2c5275; border-color: #3498db; }
+        button:active { transform: scale(0.95); }
+        button.clear { background: #7b241c; border-color: #922b21; }
+        button.clear:hover { background: #922b21; }
+        button.menu-toggle { background: #2980b9; border-color: #3498db; }
+
+        #spawn-menu {
+            position: absolute;
+            top: 0;
+            left: -320px;
+            width: 300px;
+            height: 100vh;
+            background: rgba(4, 4, 6, 0.98);
+            box-shadow: 8px 0 30px rgba(0,0,0,0.9);
+            transition: left 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+            padding: 25px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            border-right: 3px solid #3498db;
+        }
+        #spawn-menu.open { left: 0; }
+        #spawn-menu h2 { font-size: 0.85rem; color: #3498db; border-bottom: 2px solid #1f3a52; padding-bottom: 5px; margin-top: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .menu-grid button {
+            height: 40px;
+            font-size: 0.75rem;
+            background: #111116;
+            border: 1px solid #2c3e50;
+            position: relative;
+        }
+        .menu-grid button.locked {
+            opacity: 0.35;
+            filter: grayscale(0.8);
+        }
+        .menu-grid button.locked::after {
+            content: '🔒';
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 0.7rem;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(5, 5, 10, 0.95);
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            pointer-events: none;
+            line-height: 1.5;
+            border-left: 4px solid #2980b9;
+            z-index: 5;
+        }
+
+        #health-wrap {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            width: 200px;
+            z-index: 10;
+        }
+        #health-label { font-size: 0.75rem; letter-spacing: 1px; margin-bottom: 4px; color: #ccc; text-transform: uppercase; }
+        #health-bar-bg {
+            width: 100%; height: 16px; background: rgba(20,20,25,0.9);
+            border: 1px solid #922b21; border-radius: 4px; overflow: hidden;
+        }
+        #health-bar-fill {
+            height: 100%; width: 100%; background: linear-gradient(90deg, #922b21, #e74c3c);
+            transition: width 0.2s ease-out;
+        }
+        #death-banner {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(10,5,5,0.95); border: 2px solid #e74c3c; padding: 20px 40px;
+            border-radius: 10px; font-size: 1.3rem; font-weight: bold; text-align: center;
+            display: none; z-index: 300; color: #e74c3c;
+        }
+
+        #achievement-toast {
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #1c1c1c, #2c2410);
+            border: 2px solid #f1c40f;
+            border-radius: 8px;
+            padding: 12px 22px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            z-index: 400;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+            transition: top 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+            min-width: 280px;
+        }
+        #achievement-toast.show { top: 20px; }
+        #achievement-toast .icon { font-size: 2rem; }
+        #achievement-toast .title { font-size: 0.7rem; color: #f1c40f; text-transform: uppercase; letter-spacing: 1px; }
+        #achievement-toast .name { font-size: 1rem; font-weight: bold; }
+        #achievement-toast .desc { font-size: 0.75rem; color: #ccc; margin-top: 2px; max-width: 300px; }
+
+        #achievements-panel {
+            position: absolute;
+            top: 0;
+            right: -340px;
+            width: 320px;
+            height: 100vh;
+            background: rgba(4, 4, 6, 0.98);
+            box-shadow: -8px 0 30px rgba(0,0,0,0.9);
+            transition: right 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+            padding: 25px;
+            z-index: 20;
+            overflow-y: auto;
+            border-left: 3px solid #f1c40f;
+        }
+        #achievements-panel.open { right: 0; }
+        #achievements-panel h2 { font-size: 1rem; color: #f1c40f; margin-bottom: 15px; }
+        .ach-card {
+            background: #111116; border: 1px solid #2c3e50; border-radius: 6px;
+            padding: 10px 12px; margin-bottom: 10px; opacity: 0.45;
+        }
+        .ach-card.unlocked { opacity: 1; border-color: #f1c40f; }
+        .ach-card .ach-name { font-weight: bold; font-size: 0.9rem; color: #f1c40f; }
+        .ach-card .ach-desc { font-size: 0.75rem; color: #bbb; margin-top: 4px; }
+        .ach-card .ach-status { font-size: 0.65rem; text-transform: uppercase; margin-top: 6px; letter-spacing: 1px; color: #7f8c8d; }
+
+        #tool-indicator {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(41, 128, 185, 0.2);
+            border: 1px solid #2980b9;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 5;
+            text-transform: uppercase;
+        }
+
+        .speech-bubble {
+            position: absolute;
+            background: #fcf3cf;
+            color: #111;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            max-width: 260px;
+            z-index: 100;
+            display: none;
+            border: 2px solid #f1c40f;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 20px;
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: #fcf3cf transparent;
+            display: block;
+            width: 0;
+        }
+
+        #chat-overlay {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 15, 0.98);
+            border: 2px solid #f1c40f;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            width: 440px;
+            z-index: 200;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        #chat-overlay p { font-weight: bold; color: #f1c40f; font-size: 0.9rem; }
+        .chat-options { display: flex; flex-direction: column; gap: 6px; }
+        .chat-options button { background: #1c2833; font-size: 0.8rem; text-align: left; padding: 8px 12px; border: 1px solid #2c3e50; }
+        .chat-options button:hover { background: #273746; border-color: #f1c40f; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+</head>
+<body>
+
+    <div id="health-wrap">
+        <div id="health-label">Bone Integrity</div>
+        <div id="health-bar-bg"><div id="health-bar-fill"></div></div>
+    </div>
+    <div id="death-banner">💀 SKELETON COLLAPSED 💀<br><span style="font-size:0.9rem; font-weight:normal;">Reassembling in 3s...</span></div>
+
+    <div id="achievement-toast">
+        <div class="icon">🏆</div>
+        <div>
+            <div class="title" id="toast-title">Achievement Unlocked</div>
+            <div class="name" id="toast-name"></div>
+            <div class="desc" id="toast-desc"></div>
+        </div>
+    </div>
+    <div id="achievements-panel">
+        <h2>🏆 Achievements</h2>
+        <div id="achievements-list"></div>
+    </div>
+
+    <div id="top-bar">
+        <button class="menu-toggle" onclick="toggleMenu(event)">📦 Spawn Menu (Q)</button>
+        <button onclick="toggleGravity(event)" id="grav-btn">Gravity: ON</button>
+        <button onclick="toggleAchievements(event)" style="background:#b9770e; border-color:#f1c40f;">🏆 Achievements</button>
+        <button onclick="clearSandbox(event)" class="clear">🧹 Clear Map</button>
+    </div>
+
+    <div id="spawn-menu">
+        <h2>Weapons & Physics Tools</h2>
+        <div class="menu-grid">
+            <button onclick="setTool('drag', event)" style="background: #27ae60;">🎯 PhysGun</button>
+            <button onclick="setTool('gravgun', event)" style="background: #e67e22;">⚡ Gravity Gun</button>
+            <button data-unlock="weld" onclick="setTool('weld', event)" style="background: #d35400;">🔗 Weld Tool</button>
+            <button data-unlock="anchor" onclick="setTool('anchor', event)" style="background: #9b59b6;">📌 Anchor Tool</button>
+            <button data-unlock="smg" onclick="setTool('smg', event)" style="background: #2980b9;">🔫 Lethal SMG</button>
+            <button data-unlock="shotgun" onclick="setTool('shotgun', event)" style="background: #8e44ad;">🔮 Plasma Shotgun</button>
+            <button data-unlock="bazooka" onclick="setTool('bazooka', event)" style="background: #c0392b;">🚀 Explosive RPG</button>
+            <button onclick="setTool('toolgun', event)" style="background: #7b241c;">❌ Eraser Beam</button>
+        </div>
+        <h2>Props & New Gadgets</h2>
+        <div class="menu-grid">
+            <button data-unlock="plasmastruct" onclick="spawnProp('plasmastruct')" style="background: #9b59b6;">🔮 Unstable Cell</button>
+            <button data-unlock="imploder" onclick="spawnProp('imploder')" style="background: #34495e;">🕳️ Grav Imploder</button>
+            <button data-unlock="heavybeam" onclick="spawnProp('heavybeam')" style="background: #7f8c8d;">🏗️ Heavy I-Beam</button>
+            <button data-unlock="antigrav" onclick="spawnProp('antigrav')" style="background: #1abc9c;">🌌 Anti-Grav Core</button>
+            <button onclick="spawnProp('rubberball')" style="background: #e74c3c;">🔴 Bouncy Ball</button>
+            <button data-unlock="turret" onclick="spawnProp('turret')" style="background: #2c3e50;">🤖 Sentry Turret</button>
+            <button data-unlock="landmine" onclick="spawnProp('landmine')" style="background: #922b21;">💥 Landmine</button>
+            <button data-unlock="tnt" onclick="spawnProp('tnt')" style="background: #ba4a3f;">🧨 TNT Barrel</button>
+            <button data-unlock="barrel" onclick="spawnProp('barrel')" style="background: #1c1c1c;">🛢️ Oil Barrel</button>
+            <button data-unlock="spring" onclick="spawnProp('spring')" style="background: #e91e63;">🌸 Spring Pad</button>
+            <button data-unlock="sword" onclick="spawnProp('sword')" style="background: #bdc3c7; color:#000;">⚔️ Sword</button>
+            <button data-unlock="shield" onclick="spawnProp('shield')" style="background: #7d6608;">🛡️ Shield</button>
+            <button data-unlock="submarine" onclick="spawnProp('submarine')" style="background: #2980b9; grid-column: span 2;">🛳️ Submarine</button>
+            <button onclick="spawnProp('glass')" style="background: #5dade2;">🪟 Glass Pane</button>
+            <button onclick="spawnProp('crate')" style="background: #b9770e;">📦 Wooden Crate</button>
+            <button data-unlock="bonus" onclick="spawnProp('cosmiccore')" style="background: #f9e79f; color:#000; grid-column: span 2;">🌟 Cosmic Skull Core</button>
+        </div>
+        <h2>Entities</h2>
+        <div class="menu-grid">
+            <button onclick="spawnProfessor(event)" style="background: #f1c40f; color: #000; grid-column: span 2;">🗣️ Spawn Inventor Farnsworth</button>
+            <button onclick="spawnDummy(event)" style="background: #e67e22;">🤖 Test Dummy</button>
+            <button onclick="spawnZombie(event)" style="background: #27ae60;">🧟 Fragile Zombie</button>
+            <button onclick="spawnSocrates(event)" style="background: #a9946c;">🏛️ Socrates</button>
+            <button data-unlock="shark" onclick="spawnShark(event)" style="background: #34495e;">🦈 Shark</button>
+        </div>
+    </div>
+
+    <div id="tool-indicator">Tool: PhysGun</div>
+    <div id="dialogue" class="speech-bubble">Good news, everyone!</div>
+
+    <div id="chat-overlay">
+        <p id="chat-title">Interacting with Professor Farnsworth:</p>
+        <div class="chat-options">
+            <button onclick="talkOption(1)">"What madness are you engineering today, Professor?"</button>
+            <button onclick="talkOption(2)">"Can you look at my structural bone framework?"</button>
+            <button onclick="talkOption(3)">"Tell me about your latest delivery mission."</button>
+            <button onclick="talkOption(4)">"Good news, everyone!"</button>
+            <button onclick="closeChat()">[Leave Conversation]</button>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <strong>🎮 V14 SKULL & BONES SANDBOX CONTROLS:</strong><br>
+        • A / D - Run Left / Right<br>
+        • W / Space - Jump Force applied through the framework<br>
+        • S - **Hold to Crouch Lower**<br>
+        • E - Talk to Farnsworth / Open the treasure chest at world's end<br>
+        • F - Board / Exit a Submarine<br>
+        • Left Click - Use selected weapon/tool<br>
+        • Right Click - Release anchor / cancel weld / drop gravity gun item<br>
+        • ⚠️ Zombies & sharks bite - watch your Bone Integrity bar top-left<br>
+        • 🔒 Some gear starts locked - explore, fight, and build to unlock it<br>
+        • 🏆 Check the Achievements panel for secret objectives
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        const { Engine, Render, Runner, Bodies, Composite, Constraint, Mouse, MouseConstraint, Body, Vector, Vertices } = Matter;
+
+        const engine = Engine.create();
+        const world = engine.world;
+
+        const MAP_WIDTH = 15000;
+        const MAP_HEIGHT = 1700;
+        const WATER_LINE = MAP_HEIGHT - 380;
+        const OCEAN_START = 5200;
+        const BEACH_CENTER = MAP_WIDTH - 900;   // Point Nemo - the actual most remote point in any ocean
+        const BEACH_RADIUS = 480;
+        const PLASTIC_BEACH_START = BEACH_CENTER - BEACH_RADIUS - 260;
+
+        const container = document.getElementById('canvas-container');
+        const render = Render.create({
+            element: container,
+            engine: engine,
+            options: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                wireframes: false,
+                background: '#030305',
+                hasBounds: true
+            }
+        });
+
+        Render.run(render);
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+
+        // The canvas was locked to whatever size the window happened to be on load -
+        // resizing the browser left a stale, wrongly-scaled render buffer. Keep it in sync.
+        window.addEventListener('resize', () => {
+            render.canvas.width = window.innerWidth;
+            render.canvas.height = window.innerHeight;
+            render.options.width = window.innerWidth;
+            render.options.height = window.innerHeight;
+        });
+
+        // --- MAP ASSEMBLY ---
+        // Scale segment count with the wider map so resolution (px per segment) stays the same.
+        const segments = 300;
+        const segW = MAP_WIDTH / segments;
+        let groundSegments = [];
+        const bandColors = ['#e8607a', '#f39c6b', '#5cc9c0', '#e8b74a', '#c9a0dc'];
+
+        for (let i = 0; i < segments; i++) {
+            let x = i * segW + segW/2;
+            let y, color;
+
+            if (x < 2600) {                                   // Mountains
+                y = MAP_HEIGHT - 220 - Math.sin(x * 0.002) * 580;
+                color = '#1b2631';
+            } else if (x < 4600) {                             // Farnsworth's lab plateau
+                y = MAP_HEIGHT - 180;
+                color = '#212f3d';
+            } else if (x < OCEAN_START) {                      // Rocky coastline
+                y = MAP_HEIGHT - 140 - Math.sin(x * 0.01) * 30;
+                color = '#34495e';
+            } else if (x < BEACH_CENTER - BEACH_RADIUS) {      // Deep ocean crossing to Point Nemo
+                y = MAP_HEIGHT - 60 - Math.sin(x * 0.0011) * 45;
+                color = '#0b1014';
+            } else if (x < BEACH_CENTER + BEACH_RADIUS) {      // Plastic Beach mound rising out of the sea
+                let d = Math.min(1, Math.abs(x - BEACH_CENTER) / BEACH_RADIUS);
+                y = (MAP_HEIGHT - 60) - (1 - d) * 520;
+                color = bandColors[Math.floor(x / 45) % bandColors.length];
+            } else {                                           // Epilogue pier out past the beach
+                y = MAP_HEIGHT - 300;
+                color = '#6b4a2b';
+            }
+
+            let h = MAP_HEIGHT - y + 400;
+            let block = Bodies.rectangle(x, y + h/2, segW + 5, h, { isStatic: true, render: { fillStyle: color } });
+            groundSegments.push(block);
+        }
+        Composite.add(world, groundSegments);
+
+        // Water Particles Array - kept as a local physics raft near the shoreline for
+        // splash/buoyancy interaction. A painted ocean tint (see afterRender below) covers
+        // the rest of the multi-thousand-pixel Point Nemo crossing far more cheaply than
+        // simulating thousands of extra circle bodies out there would.
+        let waterParticles = [];
+        function createBallOcean() {
+            for(let i=0; i<90; i++) {
+                for(let j=0; j<14; j++) {
+                    let wDrop = Bodies.circle(OCEAN_START + 120 + (i * 26), WATER_LINE + 50 + (j * 20), 10, {
+                        friction: 0.002, restitution: 0.01, density: 0.0008, label: 'water',
+                        render: { fillStyle: 'rgba(41, 128, 185, 0.65)' }
+                    });
+                    waterParticles.push(wDrop);
+                }
+            }
+            Composite.add(world, waterParticles);
+        }
+        createBallOcean();
+
+        const mouse = Mouse.create(render.canvas);
+        const physGun = MouseConstraint.create(engine, {
+            mouse: mouse,
+            constraint: { stiffness: 0.2, render: { visible: true, strokeStyle: '#27ae60' } }
+        });
+        Composite.add(world, physGun);
+        render.mouse = mouse;
+
+        let sandboxItems = [];
+        let npcs = [];
+
+        // --- PLASTIC BEACH MONUMENT (Point Nemo) ---
+        // Modelled after the Gorillaz album cover: an offshore platform/rig structure
+        // sitting ON TOP of a colourful rubbish mound rising from the sea.
+        // Key elements: wide flat platform deck, tall antenna mast, crane arm, water-tower
+        // balloon shape, and the distinctive warm orange sky tint painted behind it all.
+        function createPlasticBeachMonument() {
+            const peakY = (MAP_HEIGHT - 60) - 520;   // summit of the mound
+            const cx = BEACH_CENTER;
+            const deck = peakY + 10;                  // platform deck sits on the summit
+
+            let parts = [
+                // ── PLATFORM DECK ──────────────────────────────────────────────────
+                Bodies.rectangle(cx, deck,        280, 14, { isStatic: true, render: { fillStyle: '#5c4033' } }),   // main deck
+                Bodies.rectangle(cx, deck + 14,   260,  6, { isStatic: true, render: { fillStyle: '#4a3028' } }),   // deck underside shadow
+                Bodies.rectangle(cx - 100, deck - 42, 10, 80, { isStatic: true, render: { fillStyle: '#6b3a2a' } }), // left leg
+                Bodies.rectangle(cx + 100, deck - 42, 10, 80, { isStatic: true, render: { fillStyle: '#6b3a2a' } }), // right leg
+                Bodies.rectangle(cx - 60, deck - 22, 10, 40, { isStatic: true, render: { fillStyle: '#7b4a3a' } }),  // inner left
+                Bodies.rectangle(cx + 60, deck - 22, 10, 40, { isStatic: true, render: { fillStyle: '#7b4a3a' } }),  // inner right
+
+                // ── MAIN ANTENNA / COMMS MAST ───────────────────────────────────
+                Bodies.rectangle(cx - 30, deck - 180, 6, 300, { isStatic: true, render: { fillStyle: '#c0392b' } }),  // red mast
+                Bodies.rectangle(cx - 30, deck - 310, 2, 50,  { isStatic: true, render: { fillStyle: '#e74c3c' } }),  // top spike
+                Bodies.rectangle(cx - 30, deck - 140, 55, 4,  { isStatic: true, render: { fillStyle: '#b03a2e' } }),  // cross-arm
+                Bodies.rectangle(cx + 25, deck - 155, 3, 38,  { isStatic: true, render: { fillStyle: '#c0392b' } }),  // sub-mast
+
+                // ── CRANE ARM ───────────────────────────────────────────────────
+                Bodies.rectangle(cx + 90, deck - 50,  6, 100, { isStatic: true, render: { fillStyle: '#7f8c8d' } }),  // crane tower
+                Bodies.rectangle(cx + 125, deck - 96, 75, 5,  { isStatic: true, render: { fillStyle: '#95a5a6' } }), // boom
+                Bodies.rectangle(cx + 162, deck - 80, 4, 35,  { isStatic: true, render: { fillStyle: '#7f8c8d' } }), // hook cable
+                Bodies.circle   (cx + 162, deck - 62,  6,     { isStatic: true, render: { fillStyle: '#566573' } }), // hook ball
+
+                // ── WATER / FUEL STORAGE TOWER ──────────────────────────────────
+                Bodies.rectangle(cx + 30, deck - 50,  8, 80, { isStatic: true, render: { fillStyle: '#616a6b' } }),  // tower pillar
+                Bodies.circle   (cx + 30, deck - 108, 22,    { isStatic: true, render: { fillStyle: '#717d7e' } }),  // tank dome
+
+                // ── HELIPAD PLATFORM ─────────────────────────────────────────────
+                Bodies.rectangle(cx - 95, deck - 10, 55, 8, { isStatic: true, render: { fillStyle: '#839192' } }), // helipad
+                Bodies.rectangle(cx - 95, deck - 14,  2, 4, { isStatic: true, render: { fillStyle: '#e74c3c' } }), // H marker centre (vertical)
+                Bodies.rectangle(cx - 95, deck - 14,  8, 2, { isStatic: true, render: { fillStyle: '#e74c3c' } }), // H marker centre (horizontal)
+
+                // ── SHIPPING CONTAINERS ON DECK ─────────────────────────────────
+                Bodies.rectangle(cx + 10,  deck - 22, 30, 14, { isStatic: true, render: { fillStyle: '#1e8449' } }),
+                Bodies.rectangle(cx + 48,  deck - 22, 30, 14, { isStatic: true, render: { fillStyle: '#e67e22' } }),
+                Bodies.rectangle(cx + 10,  deck - 36, 30, 14, { isStatic: true, render: { fillStyle: '#2980b9' } }),
+            ];
+
+            Composite.add(world, parts);
+
+            // Scattered loose colourful plastic debris that the player can kick around
+            const junkColors = ['#e91e8c','#f5a623','#39c5bb','#f1c40f','#e74c3c','#8e44ad','#3498db','#1abc9c'];
+            let junkPile = [];
+            for (let i = 0; i < 45; i++) {
+                const spread = BEACH_RADIUS * 1.6;
+                let jx = cx + (Math.random() - 0.5) * spread;
+                let d  = Math.min(1, Math.abs(jx - cx) / BEACH_RADIUS);
+                let groundY = (MAP_HEIGHT - 60) - (1 - d) * 520;
+                let jy = groundY - 15 - Math.random() * 60;
+                let color = junkColors[i % junkColors.length];
+                let sz = 8 + Math.random() * 18;
+                let piece = Math.random() > 0.45
+                    ? Bodies.rectangle(jx, jy, sz, sz * 0.6, { render: { fillStyle: color }, density: 0.001, restitution: 0.3 })
+                    : Bodies.circle(jx, jy, sz * 0.5, { render: { fillStyle: color }, density: 0.001, restitution: 0.5 });
+                piece.oldColor = color;
+                junkPile.push(piece);
+            }
+            Composite.add(world, junkPile);
+            sandboxItems.push(...junkPile);
+        }
+        createPlasticBeachMonument();
+
+        // --- EPILOGUE TREASURE ---
+        // The map doesn't just stop at the beach - a short pier continues past it to a
+        // treasure chest, so reaching the far edge of the world feels like a destination
+        // rather than a wall.
+        let treasureOpened = false;
+        function createEpilogueTreasure() {
+            const tx = MAP_WIDTH - 220;
+            const ty = MAP_HEIGHT - 300 - 18;
+            const chest = Bodies.rectangle(tx, ty, 50, 36, { isStatic: true, render: { fillStyle: '#b9770e', strokeStyle: '#7d5109', lineWidth: 2 } });
+            chest.isTreasure = true;
+            Composite.add(world, chest);
+            sandboxItems.push(chest);
+        }
+        createEpilogueTreasure();
+
+        // CUSTOM PHYSICAL SKELETON MODEL (Clean & Stable Frame with clear Polygon Skull)
+        let skeletonComposite = null;
+        let skeletonHead = null;
+        let skeletonTorso = null;
+        
+        let currentTool = 'drag';
+        let playerFacingDir = 1;
+        let lastWeaponFire = 0;
+        let weldTarget = null;
+        let gravGrabbed = null;
+        let gravConstraint = null;
+
+        // Player health - zombies used to be totally harmless, they'd just follow
+        // you around forever with no consequence. Now contact actually costs you.
+        const PLAYER_MAX_HEALTH = 100;
+        let playerHealth = PLAYER_MAX_HEALTH;
+        let playerDead = false;
+        const SPAWN_POINT = { x: 3200, y: MAP_HEIGHT - 300 };
+
+        // Submarine piloting state
+        let playerInSub = false;
+        let boardedSub = null;
+
+        function damagePlayer(amount) {
+            if (playerDead) return;
+            playerHealth = Math.max(0, playerHealth - amount);
+            document.getElementById('health-bar-fill').style.width = `${playerHealth}%`;
+            if (playerHealth <= 0) killPlayer();
+        }
+
+        // --- SHARED TOAST ---
+        function showToast(title, name, desc) {
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-name').innerText = name;
+            document.getElementById('toast-desc').innerText = desc;
+            const toast = document.getElementById('achievement-toast');
+            toast.classList.add('show');
+            clearTimeout(toast._hideTimer);
+            toast._hideTimer = setTimeout(() => toast.classList.remove('show'), 4500);
+        }
+
+        // --- ACHIEVEMENT SYSTEM (meme edition) ---
+        const ACHIEVEMENTS = {
+            raawwr: { name: 'RAAWWR', desc: 'Banged a sword against a shield like a true warrior.', unlocked: false },
+            creation: { name: 'If Creating Is Your Power, What Are You Without It?', desc: 'The AI skeleton stands over the fallen Socrates. Some questions only a philosopher could answer - too bad he\'s not around to answer this one.', unlocked: false },
+            doncamatic: { name: 'Doncamatic', desc: "Piloted a submarine into the deep, survived a shark's jaws, and made it to Plastic Beach in one piece.", unlocked: false }
+        };
+        let sharkAttackSurvived = false;
+
+        function unlockAchievement(id) {
+            const a = ACHIEVEMENTS[id];
+            if (!a || a.unlocked) return;
+            a.unlocked = true;
+            showToast('Achievement Unlocked', a.name, a.desc);
+            renderAchievementsPanel();
+        }
+
+        function renderAchievementsPanel() {
+            const list = document.getElementById('achievements-list');
+            list.innerHTML = '';
+            Object.values(ACHIEVEMENTS).forEach(a => {
+                const card = document.createElement('div');
+                card.className = 'ach-card' + (a.unlocked ? ' unlocked' : '');
+                card.innerHTML = `<div class="ach-name">${a.unlocked ? '🏆' : '🔒'} ${a.name}</div>
+                    <div class="ach-desc">${a.desc}</div>
+                    <div class="ach-status">${a.unlocked ? 'Unlocked' : 'Locked'}</div>`;
+                list.appendChild(card);
+            });
+        }
+        renderAchievementsPanel();
+
+        function toggleAchievements(e) { if(e) e.stopPropagation(); document.getElementById('achievements-panel').classList.toggle('open'); blurAll(); }
+
+        // --- PROGRESSION / UNLOCK SYSTEM (Scribblenauts-style gating) ---
+        // Not every tool exists on day one - you earn gear by doing things in the world.
+        // Locked buttons stay visible (greyed out with a lock badge) so you know what's coming.
+        let unlocked = {
+            weld: false, anchor: false, heavybeam: false,
+            smg: false, shotgun: false, landmine: false, bazooka: false, tnt: false, barrel: false,
+            submarine: false, shark: false, sword: false, shield: false,
+            turret: false, antigrav: false, imploder: false, plasmastruct: false, spring: false,
+            bonus: false
+        };
+        const UNLOCK_INFO = {
+            weld: { label: 'Weld Tool', hint: 'Talk to Professor Farnsworth' },
+            anchor: { label: 'Anchor Tool', hint: 'Talk to Professor Farnsworth' },
+            heavybeam: { label: 'Heavy I-Beam', hint: 'Talk to Professor Farnsworth' },
+            smg: { label: 'Lethal SMG', hint: 'Defeat a zombie' },
+            shotgun: { label: 'Plasma Shotgun', hint: 'Defeat a zombie' },
+            landmine: { label: 'Landmine', hint: 'Defeat a zombie' },
+            bazooka: { label: 'Explosive RPG', hint: 'Defeat 3 zombies' },
+            tnt: { label: 'TNT Barrel', hint: 'Defeat 3 zombies' },
+            barrel: { label: 'Oil Barrel', hint: 'Defeat 3 zombies' },
+            submarine: { label: 'Submarine', hint: 'Reach the ocean shore' },
+            shark: { label: 'Shark', hint: 'Reach the ocean shore' },
+            sword: { label: 'Sword', hint: 'Reach the ocean shore' },
+            shield: { label: 'Shield', hint: 'Reach the ocean shore' },
+            turret: { label: 'Sentry Turret', hint: 'Pilot a submarine' },
+            antigrav: { label: 'Anti-Grav Core', hint: 'Pilot a submarine' },
+            imploder: { label: 'Grav Imploder', hint: 'Pilot a submarine' },
+            plasmastruct: { label: 'Unstable Cell', hint: 'Pilot a submarine' },
+            spring: { label: 'Spring Pad', hint: 'Pilot a submarine' },
+            bonus: { label: 'Cosmic Skull Core', hint: 'Reach the treasure past Plastic Beach' }
+        };
+        let zombieKills = 0;
+        let reachedOcean = false;
+
+        function unlockItem(id) {
+            if (unlocked[id]) return;
+            unlocked[id] = true;
+            const info = UNLOCK_INFO[id];
+            showToast('New Gear Unlocked', info.label, 'Unlocked by: ' + info.hint);
+            refreshLockedButtons();
+        }
+        function unlockGroup(ids) { ids.forEach(unlockItem); }
+
+        function refreshLockedButtons() {
+            document.querySelectorAll('[data-unlock]').forEach(btn => {
+                const id = btn.getAttribute('data-unlock');
+                btn.classList.toggle('locked', !unlocked[id]);
+            });
+        }
+        refreshLockedButtons();
+
+
+        function killPlayer() {
+            if (playerDead || !skeletonTorso) return;
+            playerDead = true;
+            document.getElementById('death-banner').style.display = 'block';
+            const pos = { x: skeletonTorso.position.x, y: skeletonTorso.position.y };
+            Composite.remove(world, skeletonComposite);
+            skeletonTorso = null; skeletonHead = null;
+            for (let i = 0; i < 14; i++) {
+                let chunk = Bodies.circle(pos.x + (Math.random()-0.5)*15, pos.y + (Math.random()-0.5)*15, 3 + Math.random()*4, {
+                    render: { fillStyle: '#eef1f1' }
+                });
+                Body.setVelocity(chunk, { x: (Math.random()-0.5)*10, y: -Math.random()*8 });
+                sandboxItems.push(chunk);
+                Composite.add(world, chunk);
+            }
+            setTimeout(() => {
+                createAnatomicalSkeleton(SPAWN_POINT.x, SPAWN_POINT.y);
+                playerHealth = PLAYER_MAX_HEALTH;
+                document.getElementById('health-bar-fill').style.width = '100%';
+                document.getElementById('death-banner').style.display = 'none';
+                playerDead = false;
+            }, 3000);
+        }
+
+        function toggleMenu(e) { if(e) e.stopPropagation(); document.getElementById('spawn-menu').classList.toggle('open'); blurAll(); }
+        function setTool(tool, e) { 
+            if (UNLOCK_INFO[tool] && !unlocked[tool]) {
+                showToast('Locked', UNLOCK_INFO[tool].label, 'Unlock by: ' + UNLOCK_INFO[tool].hint);
+                blurAll();
+                return;
+            }
+            currentTool = tool; 
+            document.getElementById('tool-indicator').innerText = `Tool: ${tool}`; 
+            physGun.constraint.stiffness = (tool === 'drag') ? 0.2 : 0; 
+            if(gravConstraint) { Composite.remove(world, gravConstraint); gravConstraint = null; gravGrabbed = null; }
+            weldTarget = null;
+            blurAll(); 
+        }
+        function blurAll() { document.querySelectorAll('button').forEach(b => b.blur()); window.focus(); }
+
+        // --- ASSEMBLE TRADITIONAL SKELETON WITH POLYGONAL SKULL STRUCT ---
+        function createAnatomicalSkeleton(x, y) {
+            skeletonComposite = Composite.create();
+
+            // Rounded cranium tapering to a jaw - actually reads as a skull silhouette.
+            // Eye sockets / nasal cavity / teeth are painted on top in the afterRender hook below,
+            // since baking cavities into the collision mesh made the old shape unstable.
+            const skullVertices = [
+                { x: 0, y: -19 }, { x: 10, y: -17 }, { x: 16, y: -9 }, { x: 17, y: 1 },
+                { x: 13, y: 9 },  { x: 8, y: 16 },   { x: 0, y: 19 },  { x: -8, y: 16 },
+                { x: -13, y: 9 }, { x: -17, y: 1 },  { x: -16, y: -9 },{ x: -10, y: -17 }
+            ];
+
+            // Bodies sharing a negative collision group never collide with each other,
+            // no matter what - this stops the head and torso from jittering against
+            // their own neck joint (they used to bump each other every frame).
+            const boneGroup = Body.nextGroup(true);
+
+            skeletonHead = Bodies.fromVertices(x, y - 28, skullVertices, {
+                density: 0.002, frictionAir: 0.02, label: 'player_bone',
+                collisionFilter: { group: boneGroup },
+                render: { fillStyle: '#eef1f1', strokeStyle: '#8b9494', lineWidth: 2 }
+            });
+
+            skeletonTorso = Bodies.rectangle(x, y + 5, 20, 34, {
+                density: 0.004, frictionAir: 0.02, label: 'player_bone',
+                collisionFilter: { group: boneGroup },
+                render: { fillStyle: '#d5dbdb', strokeStyle: '#b2babb', lineWidth: 2 }
+            });
+
+            // True Rigid Neck Anchor Matrix
+            let neckJoint = Constraint.create({
+                bodyA: skeletonHead, bodyB: skeletonTorso,
+                pointA: { x: 0, y: 12 }, pointB: { x: 0, y: -16 },
+                stiffness: 0.95, length: 1,
+                render: { visible: true, strokeStyle: '#b2babb', lineWidth: 2 }
+            });
+
+            Composite.add(skeletonComposite, [skeletonHead, skeletonTorso, neckJoint]);
+            Composite.add(world, skeletonComposite);
+        }
+        createAnatomicalSkeleton(3200, MAP_HEIGHT - 300);
+
+        // --- SKULL FACE PAINTER ---
+        // Draws eye sockets, a nasal cavity and a row of teeth on top of the head body every
+        // frame, in screen space, so it tracks the head without touching the physics shape.
+        Matter.Events.on(render, 'afterRender', () => {
+            if (!skeletonHead) return;
+            const ctx = render.context;
+            const sx = skeletonHead.position.x - render.bounds.min.x;
+            const sy = skeletonHead.position.y - render.bounds.min.y;
+            ctx.save();
+            ctx.translate(sx, sy);
+
+            // Eye sockets
+            ctx.fillStyle = '#111417';
+            ctx.beginPath(); ctx.ellipse(-7.5, -3, 4.6, 5.6, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(7.5, -3, 4.6, 5.6, 0, 0, Math.PI * 2); ctx.fill();
+
+            // Brow shading
+            ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(-13, -9); ctx.lineTo(-2.5, -8); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(13, -9); ctx.lineTo(2.5, -8); ctx.stroke();
+
+            // Nasal cavity
+            ctx.fillStyle = '#111417';
+            ctx.beginPath();
+            ctx.moveTo(0, 1.5); ctx.lineTo(-3.2, 8.5); ctx.lineTo(3.2, 8.5);
+            ctx.closePath(); ctx.fill();
+
+            // Jaw hinge line - separates the cranium from the mandible so it doesn't
+            // read as one blank blob
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(-14, 6); ctx.quadraticCurveTo(0, 10.5, 14, 6); ctx.stroke();
+
+            // Teeth row + jaw line
+            ctx.strokeStyle = '#8a9494'; ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.moveTo(-9.5, 14.5); ctx.lineTo(9.5, 14.5); ctx.stroke();
+            for (let tx = -8.5; tx <= 8.5; tx += 3.4) {
+                ctx.beginPath(); ctx.moveTo(tx, 14.5); ctx.lineTo(tx, 18.5); ctx.stroke();
+            }
+
+            // Cheekbone hint
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(-11, 4, 3.5, -0.6, 1.2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(11, 4, 3.5, Math.PI - 1.2, Math.PI + 0.6); ctx.stroke();
+
+            ctx.restore();
+
+            // --- NPC FACE PAINTER ---
+            // Draws distinctive features on NPCs so they're recognisable at a glance
+            npcs.forEach(n => {
+                if (n.dead || !n.head) return;
+                const hx = n.head.position.x - render.bounds.min.x;
+                const hy = n.head.position.y - render.bounds.min.y;
+                ctx.save();
+                ctx.translate(hx, hy);
+
+                if (n.type === 'prof') {
+                    // Thick round glasses (two circles connected by a bridge)
+                    ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.arc(-4.5, 1, 3.5, 0, Math.PI*2); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(4.5, 1, 3.5, 0, Math.PI*2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(-1, 1); ctx.lineTo(1, 1); ctx.stroke();
+                    // Bald dome highlight
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(-3, -5, 4, -1.2, 0); ctx.stroke();
+                    // Tiny mouth (open grin)
+                    ctx.strokeStyle = '#7b3f00'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(0, 5.5, 2.5, 0.2, Math.PI - 0.2); ctx.stroke();
+                }
+                else if (n.type === 'socrates') {
+                    // White/grey curly beard covering lower half
+                    ctx.fillStyle = '#d0c8b8';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 6, 6.5, 5, 0, 0, Math.PI);
+                    ctx.fill();
+                    // Beard texture squiggles
+                    ctx.strokeStyle = '#a09080'; ctx.lineWidth = 0.8;
+                    for (let bx2 = -4; bx2 <= 4; bx2 += 3) {
+                        ctx.beginPath();
+                        ctx.moveTo(bx2, 3);
+                        ctx.quadraticCurveTo(bx2 + 1.5, 5, bx2, 9);
+                        ctx.stroke();
+                    }
+                    // Eyes - wise, slightly squinting
+                    ctx.fillStyle = '#3d2b1f';
+                    ctx.beginPath(); ctx.ellipse(-3.5, -1, 2.2, 1.4, -0.2, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(3.5, -1, 2.2, 1.4, 0.2, 0, Math.PI*2); ctx.fill();
+                    // Laurel wreath dots along top
+                    ctx.fillStyle = '#6b8f3e';
+                    for (let wx = -8; wx <= 8; wx += 3) {
+                        ctx.beginPath();
+                        ctx.ellipse(wx, -8 + Math.abs(wx)*0.3, 2, 1.3, wx*0.1, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+                else if (n.type === 'zombie') {
+                    // Classic X eyes
+                    ctx.strokeStyle = '#7dcea0'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(-5.5, -3); ctx.lineTo(-2.5, 0); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(-2.5, -3); ctx.lineTo(-5.5, 0); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(2.5, -3); ctx.lineTo(5.5, 0); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(5.5, -3); ctx.lineTo(2.5, 0); ctx.stroke();
+                    // Ragged mouth
+                    ctx.strokeStyle = '#145a32'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(-5, 5); ctx.lineTo(-3, 3); ctx.lineTo(-1, 5); ctx.lineTo(1, 3); ctx.lineTo(3, 5); ctx.lineTo(5, 3); ctx.stroke();
+                }
+                else if (n.type === 'dummy') {
+                    // Target cross on the face
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(0, 7); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.stroke();
+                }
+                ctx.restore();
+            });
+
+            // Open ocean tint - painted cheaply instead of
+            // simulating thousands of extra water-ball bodies across it.
+            const oceanLeft = OCEAN_START - render.bounds.min.x;
+            const oceanRight = (BEACH_CENTER - BEACH_RADIUS) - render.bounds.min.x;
+            const waterTop = WATER_LINE - render.bounds.min.y;
+            if (oceanRight > 0 && oceanLeft < window.innerWidth) {
+                const clipL = Math.max(0, oceanLeft), clipR = Math.min(window.innerWidth, oceanRight);
+                ctx.save();
+                ctx.fillStyle = 'rgba(20, 60, 110, 0.35)';
+                ctx.fillRect(clipL, Math.max(0, waterTop), clipR - clipL, window.innerHeight);
+                ctx.strokeStyle = 'rgba(120,180,220,0.15)';
+                ctx.lineWidth = 2;
+                for (let ly = Math.max(0, waterTop) + 40; ly < window.innerHeight; ly += 90) {
+                    ctx.beginPath();
+                    ctx.moveTo(clipL, ly + Math.sin(Date.now()/800 + ly) * 6);
+                    ctx.lineTo(clipR, ly + Math.sin(Date.now()/800 + ly + 2) * 6);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // Plastic Beach sky glow - the Gorillaz album has a distinctive warm orange/red
+            // sunset atmosphere. Paint it as a radial gradient behind the monument.
+            const glowX = BEACH_CENTER - render.bounds.min.x;
+            const glowY = (MAP_HEIGHT - 60) - 520 - render.bounds.min.y;  // monument peak
+            if (glowX > -600 && glowX < window.innerWidth + 600) {
+                ctx.save();
+                const grd = ctx.createRadialGradient(glowX, glowY, 80, glowX, glowY, 600);
+                grd.addColorStop(0,   'rgba(220, 100, 30, 0.22)');
+                grd.addColorStop(0.4, 'rgba(180, 60, 20, 0.12)');
+                grd.addColorStop(1,   'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = grd;
+                ctx.fillRect(glowX - 600, glowY - 400, 1200, 900);
+                ctx.restore();
+            }
+
+            // Plastic Beach signage - centered on the actual monument, drawn in world
+            // space by converting to screen coords, same trick as the skull paint above.
+            const peakY = (MAP_HEIGHT - 60) - 520;
+            const bx = BEACH_CENTER - render.bounds.min.x;
+            const by = (peakY - 270) - render.bounds.min.y;
+            if (bx > -300 && bx < window.innerWidth + 300) {
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                ctx.shadowBlur = 6;
+                ctx.fillStyle = '#f5b7b1';
+                ctx.font = 'bold 28px sans-serif';
+                ctx.fillText('🏝️ PLASTIC BEACH', bx, by);
+                ctx.fillStyle = '#e8c39e';
+                ctx.font = 'italic 14px sans-serif';
+                ctx.fillText('Point Nemo - the loneliest place in any ocean', bx, by + 22);
+                ctx.restore();
+            }
+        });
+
+        function getFrontSpawnPoint() {
+            return { x: skeletonTorso.position.x + (playerFacingDir * 85), y: skeletonTorso.position.y - 10 };
+        }
+
+        // --- GIB DESTRUCTION ENGINE ---
+        function damageNPC(npcBody, forceVector) {
+            let match = npcs.find(n => n.torso === npcBody || n.head === npcBody);
+            if (match && !match.dead) {
+                match.dead = true;
+                const pos = npcBody.position;
+                if (match.type === 'socrates') unlockAchievement('creation');
+                if (match.type === 'zombie') {
+                    zombieKills++;
+                    if (zombieKills === 1) unlockGroup(['smg', 'shotgun', 'landmine']);
+                    if (zombieKills === 3) unlockGroup(['bazooka', 'tnt', 'barrel']);
+                }
+                Composite.remove(world, [match.torso, match.head]);
+                if(match.joint) Composite.remove(world, match.joint);
+                
+                for (let i = 0; i < 12; i++) {
+                    let chunk = Bodies.circle(pos.x + (Math.random()-0.5)*15, pos.y + (Math.random()-0.5)*15, 4 + Math.random()*5, {
+                        render: { fillStyle: Math.random() > 0.4 ? '#922b21' : '#f4f6f7' }
+                    });
+                    Body.setVelocity(chunk, { x: forceVector.x * 11 + (Math.random()-0.5)*5, y: forceVector.y * 11 - Math.random()*5 });
+                    sandboxItems.push(chunk);
+                    Composite.add(world, chunk);
+                }
+            }
+        }
+
+        // --- TOOLS AND WEAPONS LOGIC ---
+        // Right-click used to fall through and fire the exact same action as left-click
+        // (mousedown fires for every button) - so right-clicking with the SMG out would
+        // still shoot, and there was no way to release an anchor or cancel a weld once
+        // started. Right-click is now a dedicated "undo/release" action per tool.
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+        window.addEventListener('mousedown', (e) => {
+            if (e.clientX < 300 && document.getElementById('spawn-menu').classList.contains('open')) return;
+            if (e.clientX > window.innerWidth - 320 && document.getElementById('achievements-panel').classList.contains('open')) return;
+            if (!skeletonTorso) return;
+
+            const wMouse = Vector.add(mouse.position, render.bounds.min);
+            const fireDir = Vector.normalise(Vector.sub(wMouse, skeletonTorso.position));
+            const now = Date.now();
+
+            if (e.button === 2) {
+                if (currentTool === 'anchor') {
+                    let targets = Matter.Query.point(Composite.allBodies(world), wMouse);
+                    let found = targets.find(t => t.isStatic && t.label !== 'player_bone' && !groundSegments.includes(t));
+                    if (found) {
+                        Body.setStatic(found, false);
+                        found.render.strokeStyle = undefined;
+                        found.render.lineWidth = 1;
+                    }
+                } else if (currentTool === 'weld' && weldTarget) {
+                    weldTarget.render.fillStyle = weldTarget.oldColor || weldTarget.render.fillStyle;
+                    weldTarget = null;
+                } else if (currentTool === 'gravgun' && gravGrabbed) {
+                    if (gravConstraint) { Composite.remove(world, gravConstraint); gravConstraint = null; }
+                    gravGrabbed = null;
+                }
+                return;
+            }
+            if (e.button !== 0) return;
+
+            if (currentTool === 'anchor') {
+                let targets = Matter.Query.point(Composite.allBodies(world), wMouse);
+                let found = targets.find(t => !t.isStatic && t.label !== 'player_bone' && t.label !== 'water');
+                if (found) {
+                    Body.setStatic(found, true);
+                    found.render.strokeStyle = '#9b59b6';
+                    found.render.lineWidth = 3;
+                }
+            }
+            else if (currentTool === 'gravgun') {
+                if (!gravGrabbed) {
+                    let targets = Matter.Query.point(Composite.allBodies(world), wMouse);
+                    let found = targets.find(t => !t.isStatic && t.label !== 'player_bone' && t.label !== 'water' && !groundSegments.includes(t));
+                    if (found) {
+                        gravGrabbed = found;
+                        gravConstraint = Constraint.create({
+                            bodyA: skeletonTorso, bodyB: gravGrabbed, stiffness: 0.15,
+                            render: { visible: true, strokeStyle: '#e67e22', lineWidth: 2 }
+                        });
+                        Composite.add(world, gravConstraint);
+                    }
+                } else {
+                    let launched = gravGrabbed;
+                    if(gravConstraint) { Composite.remove(world, gravConstraint); gravConstraint = null; }
+                    gravGrabbed = null;
+                    Body.setVelocity(launched, Vector.mult(fireDir, 26));
+                }
+            }
+            else if (currentTool === 'weld') {
+                let targets = Matter.Query.point(Composite.allBodies(world), wMouse);
+                let found = targets.find(t => !t.isStatic && t.label !== 'player_bone' && t.label !== 'water');
+                if (found) {
+                    if (!weldTarget) {
+                        weldTarget = found;
+                        weldTarget.render.fillStyle = '#f1c40f';
+                    } else if (weldTarget !== found) {
+                        let link = Constraint.create({
+                            bodyA: weldTarget, bodyB: found, stiffness: 0.9,
+                            render: { visible: true, strokeStyle: '#f1c40f', lineWidth: 3 }
+                        });
+                        Composite.add(world, link);
+                        weldTarget.render.fillStyle = weldTarget.oldColor || '#b9770e';
+                        weldTarget = null;
+                    }
+                }
+            }
+            else if (currentTool === 'smg' && now - lastWeaponFire > 80) {
+                shootBullet(fireDir, 28, false); lastWeaponFire = now;
+            }
+            else if (currentTool === 'shotgun' && now - lastWeaponFire > 350) {
+                for(let i=0; i<5; i++) {
+                    let spread = { x: fireDir.x + (Math.random()-0.5)*0.2, y: fireDir.y + (Math.random()-0.5)*0.2 };
+                    shootBullet(Vector.normalise(spread), 24, false);
+                }
+                lastWeaponFire = now;
+            }
+            else if (currentTool === 'bazooka' && now - lastWeaponFire > 500) {
+                shootBullet(fireDir, 18, true); lastWeaponFire = now;
+            }
+            else if (currentTool === 'toolgun') {
+                Matter.Query.point(Composite.allBodies(world), wMouse).forEach(t => {
+                    if(!t.isStatic && t.label !== 'player_bone' && t.label !== 'water') Composite.remove(world, t);
+                });
+            }
+        });
+
+        function shootBullet(dir, speed, isRocket) {
+            const startX = skeletonTorso.position.x + dir.x * 40;
+            const startY = skeletonTorso.position.y + dir.y * 40;
+            const bullet = Bodies.circle(startX, startY, isRocket ? 8 : 4, {
+                render: { fillStyle: isRocket ? '#e67e22' : '#f1c40f' }, frictionAir: 0, label: 'bullet'
+            });
+            bullet.isRocket = isRocket;
+            Body.setVelocity(bullet, Vector.mult(dir, speed));
+            sandboxItems.push(bullet);
+            Composite.add(world, bullet);
+        }
+
+        // --- EXPANDED PROP LIST FACTORY ---
+        function spawnProp(type, customPos = null) {
+            if (!customPos && UNLOCK_INFO[type] && !unlocked[type]) {
+                showToast('Locked', UNLOCK_INFO[type].label, 'Unlock by: ' + UNLOCK_INFO[type].hint);
+                blurAll();
+                return;
+            }
+            blurAll(); 
+            const pt = customPos || getFrontSpawnPoint(); 
+            let b;
+            
+            if (type === 'tnt') { b = Bodies.rectangle(pt.x, pt.y, 35, 45, { render: { fillStyle: '#c0392b' } }); b.isTNT = true; }
+            else if (type === 'landmine') { b = Bodies.rectangle(pt.x, pt.y + 15, 40, 12, { render: { fillStyle: '#922b21' } }); b.isMine = true; }
+            else if (type === 'plasmastruct') { b = Bodies.rectangle(pt.x, pt.y, 30, 50, { render: { fillStyle: '#00ffcc' }, restitution: 0.1 }); b.isPlasmaCell = true; }
+            else if (type === 'imploder') { b = Bodies.circle(pt.x, pt.y, 22, { render: { fillStyle: '#2e4053' }, density: 0.05 }); b.isImploder = true; }
+            else if (type === 'heavybeam') { b = Bodies.rectangle(pt.x, pt.y, 250, 20, { render: { fillStyle: '#7f8c8d' }, density: 0.02 }); }
+            else if (type === 'antigrav') { b = Bodies.circle(pt.x, pt.y, 20, { render: { fillStyle: '#1abc9c' }, isStatic: true }); b.isAntiGrav = true; }
+            else if (type === 'rubberball') { b = Bodies.circle(pt.x, pt.y, 18, { restitution: 0.95, render: { fillStyle: '#e74c3c' } }); }
+            else if (type === 'turret') { b = Bodies.rectangle(pt.x, pt.y, 25, 40, { render: { fillStyle: '#34495e' }, isStatic: true }); b.isTurret = true; b.lastShot = 0; }
+            else if (type === 'glass') { b = Bodies.rectangle(pt.x, pt.y, 10, 85, { render: { fillStyle: 'rgba(174,234,241,0.45)' } }); b.isGlass = true; }
+            else if (type === 'crate') { b = Bodies.rectangle(pt.x, pt.y, 45, 45, { render: { fillStyle: '#b9770e' } }); }
+            else if (type === 'barrel') { b = Bodies.rectangle(pt.x, pt.y, 34, 46, { render: { fillStyle: '#1c1c1c' }, density: 0.006 }); b.isTNT = true; b.explosionPower = 1.7; }
+            else if (type === 'spring') { b = Bodies.rectangle(pt.x, pt.y + 15, 50, 14, { isStatic: true, render: { fillStyle: '#e91e63' } }); b.isSpring = true; }
+            else if (type === 'sword') { b = Bodies.rectangle(pt.x, pt.y, 62, 10, { render: { fillStyle: '#bdc3c7' }, density: 0.01 }); b.isSword = true; }
+            else if (type === 'shield') { b = Bodies.circle(pt.x, pt.y, 26, { render: { fillStyle: '#7d6608' }, density: 0.02 }); b.isShield = true; }
+            else if (type === 'submarine') {
+                // Proper submarine hull: flat top, rounded bottom, tapered bow and stern
+                const hullVerts = [
+                    { x: -78, y: 0 },  { x: -68, y: -14 }, { x: -30, y: -22 },
+                    { x: 40, y: -22 }, { x: 68, y: -14 },  { x: 80, y: 0 },
+                    { x: 68, y: 18 },  { x: 40, y: 26 },   { x: -30, y: 26 },
+                    { x: -68, y: 18 }
+                ];
+                // Conning tower as a separate static-joined body on top
+                const grpSub = Body.nextGroup(true);
+                b = Bodies.fromVertices(pt.x, pt.y, hullVerts, {
+                    collisionFilter: { group: grpSub },
+                    density: 0.008, frictionAir: 0.08, restitution: 0.05,
+                    render: { fillStyle: '#2c3e50', strokeStyle: '#1a252f', lineWidth: 2 }
+                });
+                const tower = Bodies.rectangle(pt.x - 10, pt.y - 36, 30, 24, {
+                    collisionFilter: { group: grpSub },
+                    density: 0.002, frictionAir: 0.08,
+                    render: { fillStyle: '#1f2f3d', strokeStyle: '#1a252f', lineWidth: 1.5 }
+                });
+                const towerJoint = Constraint.create({
+                    bodyA: b, bodyB: tower,
+                    pointA: { x: -10, y: -18 }, pointB: { x: 0, y: 12 },
+                    stiffness: 1, length: 0, render: { visible: false }
+                });
+                Composite.add(world, [tower, towerJoint]);
+                b.isSubmarine = true; b.subHP = 100; b.wasSharkAttacked = false;
+                b.towerBody = tower; b.towerJoint = towerJoint;
+            }
+            else if (type === 'cosmiccore') { b = Bodies.circle(pt.x, pt.y, 26, { render: { fillStyle: '#f9e79f' }, density: 0.02 }); b.isTNT = true; b.explosionPower = 3; }
+
+            if (b) { b.oldColor = b.render.fillStyle; sandboxItems.push(b); Composite.add(world, b); }
+        }
+
+        function spawnDummy() {
+            blurAll(); const pt = getFrontSpawnPoint();
+            const grp = Body.nextGroup(true);
+            const t = Bodies.rectangle(pt.x, pt.y, 20, 34, { collisionFilter: { group: grp }, render: { fillStyle: '#c0392b' } });
+            const h = Bodies.circle(pt.x, pt.y - 28, 11, { collisionFilter: { group: grp }, render: { fillStyle: '#e74c3c' } });
+            const j = Constraint.create({ bodyA: h, bodyB: t, pointB: { x: 0, y: -17 }, stiffness: 0.9, length: 0 }); j.render.visible = false;
+            Composite.add(world, [t, h, j]);
+            npcs.push({ torso: t, head: h, joint: j, type: 'dummy', dead: false });
+        }
+
+        function spawnZombie() {
+            blurAll(); const pt = getFrontSpawnPoint();
+            const grp = Body.nextGroup(true);
+            const t = Bodies.rectangle(pt.x, pt.y, 20, 34, { collisionFilter: { group: grp }, render: { fillStyle: '#1a5e2a' } });
+            const h = Bodies.circle(pt.x, pt.y - 28, 11, { collisionFilter: { group: grp }, render: { fillStyle: '#229954' } });
+            const j = Constraint.create({ bodyA: h, bodyB: t, pointB: { x: 0, y: -17 }, stiffness: 0.9, length: 0 }); j.render.visible = false;
+            Composite.add(world, [t, h, j]);
+            npcs.push({ torso: t, head: h, joint: j, type: 'zombie', dead: false, lastHit: 0 });
+        }
+
+        // Farnsworth: white lab coat, bald domed head, tiny round glasses painted on
+        function spawnProfessor() {
+            blurAll(); const pt = getFrontSpawnPoint();
+            const grp = Body.nextGroup(true);
+            const t = Bodies.rectangle(pt.x, pt.y, 20, 34, { collisionFilter: { group: grp }, render: { fillStyle: '#d6eaf8' } });
+            const h = Bodies.circle(pt.x, pt.y - 28, 11, { collisionFilter: { group: grp }, render: { fillStyle: '#f0c080' } });
+            const j = Constraint.create({ bodyA: h, bodyB: t, pointB: { x: 0, y: -17 }, stiffness: 0.9, length: 0 }); j.render.visible = false;
+            Composite.add(world, [t, h, j]);
+            npcs.push({ torso: t, head: h, joint: j, type: 'prof', dead: false, lastSpeech: 0, lastBuild: Date.now() });
+        }
+
+        // Socrates: cream toga body, olive skin head, white beard drawn on
+        function spawnSocrates() {
+            blurAll(); const pt = getFrontSpawnPoint();
+            const grp = Body.nextGroup(true);
+            const t = Bodies.rectangle(pt.x, pt.y, 22, 34, { collisionFilter: { group: grp }, render: { fillStyle: '#f2ede2' } });
+            const h = Bodies.circle(pt.x, pt.y - 28, 11, { collisionFilter: { group: grp }, render: { fillStyle: '#c8a87a' } });
+            const j = Constraint.create({ bodyA: h, bodyB: t, pointB: { x: 0, y: -17 }, stiffness: 0.9, length: 0 }); j.render.visible = false;
+            Composite.add(world, [t, h, j]);
+            npcs.push({ torso: t, head: h, joint: j, type: 'socrates', dead: false });
+        }
+
+        function spawnShark() {
+            if (!unlocked.shark) {
+                showToast('Locked', UNLOCK_INFO.shark.label, 'Unlock by: ' + UNLOCK_INFO.shark.hint);
+                blurAll();
+                return;
+            }
+            blurAll(); const pt = getFrontSpawnPoint();
+            const grp = Body.nextGroup(true);
+            // Proper shark: low wide torpedo body with pointed left snout and tail notch right
+            const sharkVerts = [
+                { x: -42, y: 0 },  { x: -30, y: -7 }, { x: -8, y: -9 },
+                { x: 20, y: -5 },  { x: 42, y: 0 },   { x: 34, y: 5 },
+                { x: 20, y: 2 },   { x: -8, y: 7 },   { x: -30, y: 6 }
+            ];
+            // Slim triangular dorsal fin glued to the back of the body
+            const finVerts = [ { x: 0, y: 0 }, { x: 5, y: -18 }, { x: -5, y: 0 } ];
+            const t = Bodies.fromVertices(pt.x, pt.y, sharkVerts, {
+                collisionFilter: { group: grp }, density: 0.002, frictionAir: 0.05,
+                render: { fillStyle: '#7f8c8d', strokeStyle: '#566573', lineWidth: 1.5 }
+            });
+            const finX = t ? t.position.x - 8 : pt.x - 8;
+            const finY = t ? t.position.y - 11 : pt.y - 11;
+            const h = Bodies.fromVertices(finX, finY, finVerts, {
+                collisionFilter: { group: grp }, density: 0.0005,
+                render: { fillStyle: '#6d7e7e' }
+            });
+            const j = Constraint.create({
+                bodyA: h, bodyB: t,
+                pointA: { x: 0, y: 4 }, pointB: { x: -8, y: -8 },
+                stiffness: 0.98, length: 0
+            });
+            j.render.visible = false;
+            Composite.add(world, [t, h, j]);
+            npcs.push({ torso: t, head: h, joint: j, type: 'shark', dead: false, lastHit: 0 });
+        }
+
+        const keys = {};
+        window.addEventListener('keydown', (e) => { 
+            keys[e.code] = true; 
+            if(e.code === 'KeyQ') toggleMenu(); 
+            if(e.code === 'KeyE') { checkFarnsworthInteraction(); checkTreasureInteraction(); }
+            if(e.code === 'KeyF') toggleSubmarineBoard();
+        });
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+        let gravityOn = true;
+
+        // --- SUBMARINE BOARDING ---
+        // Boarding freezes the skeleton (isStatic + invisible) and glues it to the sub's
+        // position every tick, so all the existing player-position logic (camera, weapon
+        // origin, NPC targeting) keeps working unchanged - it just tracks the sub instead.
+        function toggleSubmarineBoard() {
+            if (!skeletonTorso || playerDead) return;
+            if (playerInSub) {
+                Body.setStatic(skeletonTorso, false);
+                Body.setStatic(skeletonHead, false);
+                skeletonTorso.collisionFilter.mask = 0xFFFFFFFF;
+                skeletonHead.collisionFilter.mask = 0xFFFFFFFF;
+                skeletonTorso.render.opacity = 1; skeletonHead.render.opacity = 1;
+                Body.setPosition(skeletonTorso, { x: boardedSub.position.x, y: boardedSub.position.y - 40 });
+                Body.setPosition(skeletonHead, { x: boardedSub.position.x, y: boardedSub.position.y - 75 });
+                Body.setVelocity(skeletonTorso, { x: 0, y: 0 });
+                playerInSub = false;
+                boardedSub = null;
+            } else {
+                let sub = sandboxItems.find(it => it.isSubmarine && Vector.magnitude(Vector.sub(it.position, skeletonTorso.position)) < 140);
+                if (sub) {
+                    boardedSub = sub;
+                    playerInSub = true;
+                    Body.setStatic(skeletonTorso, true);
+                    Body.setStatic(skeletonHead, true);
+                    skeletonTorso.collisionFilter.mask = 0x00000000;
+                    skeletonHead.collisionFilter.mask = 0x00000000;
+                    skeletonTorso.render.opacity = 0; skeletonHead.render.opacity = 0;
+                    unlockGroup(['turret', 'antigrav', 'imploder', 'plasmastruct', 'spring']);
+                }
+            }
+        }
+
+        // --- EPILOGUE TREASURE INTERACTION ---
+        function checkTreasureInteraction() {
+            if (!skeletonTorso || treasureOpened) return;
+            let chest = sandboxItems.find(it => it.isTreasure);
+            if (chest && Vector.magnitude(Vector.sub(skeletonTorso.position, chest.position)) < 100) {
+                treasureOpened = true;
+                chest.render.fillStyle = '#f1c40f';
+                for (let i = 0; i < 10; i++) {
+                    let loot = Bodies.circle(chest.position.x + (Math.random()-0.5)*40, chest.position.y - 30, 10, { render: { fillStyle: '#f7ca18' } });
+                    Body.setVelocity(loot, { x: (Math.random()-0.5)*10, y: -8 - Math.random()*6 });
+                    sandboxItems.push(loot);
+                    Composite.add(world, loot);
+                }
+                unlocked.bonus = true;
+                refreshLockedButtons();
+                showToast('The End of the World', 'You made it.', 'Not bad for a pile of bones. The Cosmic Skull Core is yours - check the Props menu.');
+            }
+        }
+
+        // --- EXTENDED FARNSWORTH DIALOG MATRIX ---
+        let currentInteractingProf = null;
+        function checkFarnsworthInteraction() {
+            if(!skeletonTorso) return;
+            let prof = npcs.find(n => n.type === 'prof' && !n.dead && Vector.magnitude(Vector.sub(skeletonTorso.position, n.torso.position)) < 150);
+            if(prof) {
+                currentInteractingProf = prof;
+                document.getElementById('chat-overlay').style.display = 'flex';
+                unlockGroup(['weld', 'anchor', 'heavybeam']);
+            }
+        }
+
+        function talkOption(choice) {
+            if(!currentInteractingProf) return;
+            const bubble = document.getElementById('dialogue');
+            let resp = "";
+            
+            if(choice === 1) {
+                const madnessLines = [
+                    "I am manufacturing an interdimensional toaster that melts reality itself!",
+                    "A device that extracts dark matter from bouncing physics balls!",
+                    "My atomic neutrino disintegrator! Be careful, it doesn't have a safety switch!",
+                    "Nothing major, just a fully functional parallel universe containment flask."
+                ];
+                resp = madnessLines[Math.floor(Math.random() * madnessLines.length)];
+            }
+            if(choice === 2) {
+                resp = "Astounding! Your head structure is a perfectly defined polygonal skull matrix! No meat shells required!";
+            }
+            if(choice === 3) {
+                const deliveryLines = [
+                    "The crew is currently being digested by giant space bees on a monumentally deadly planet!",
+                    "We are delivering a crate of pure, highly volatile TNT to a civilization made entirely of open flames!",
+                    "Standard delivery procedure... although Hermes managed to misplace our liability waivers again."
+                ];
+                resp = deliveryLines[Math.floor(Math.random() * deliveryLines.length)];
+            }
+            if(choice === 4) {
+                resp = "Good news, everyone! I've taught the toaster to feel existential dread!";
+            }
+            
+            bubble.innerText = resp;
+            bubble.style.display = 'block';
+            currentInteractingProf.lastSpeech = Date.now() + 6000;
+            closeChat();
+        }
+        function closeChat() { document.getElementById('chat-overlay').style.display = 'none'; window.focus(); }
+
+        // --- REALTIME SUBSTEP PHYSICS TICK LOOP ---
+        Matter.Events.on(engine, 'beforeUpdate', () => {
+            if (!skeletonTorso) return;
+
+            const viewX = Math.max(0, Math.min(MAP_WIDTH - window.innerWidth, skeletonTorso.position.x - window.innerWidth / 2));
+            const viewY = Math.max(0, Math.min(MAP_HEIGHT - window.innerHeight, (skeletonTorso.position.y - 120) - window.innerHeight / 2));
+            render.bounds.min.x = viewX; render.bounds.max.x = viewX + window.innerWidth;
+            render.bounds.min.y = viewY; render.bounds.max.y = viewY + window.innerHeight;
+            Mouse.setOffset(mouse, render.bounds.min);
+
+            // Stabilize posture
+            Body.setAngle(skeletonTorso, 0); Body.setAngularVelocity(skeletonTorso, 0);
+            Body.setAngle(skeletonHead, 0);
+
+            if (playerInSub && boardedSub) {
+                // Piloting a submarine - apply forces rather than locking velocity so
+                // gravity still applies when you're not actively thrusting up.
+                // This is what stopped the sub from flying before - setVelocity was
+                // overriding gravity entirely every single tick.
+                let svx = 0;
+                if (keys['KeyA'] || keys['ArrowLeft']) { svx = -4.6; playerFacingDir = -1; }
+                if (keys['KeyD'] || keys['ArrowRight']) { svx = 4.6; playerFacingDir = 1; }
+                if (svx !== 0) Body.setVelocity(boardedSub, { x: svx, y: boardedSub.velocity.y });
+                // Vertical: only apply upward force when W held, downward when S held
+                // so the sub naturally sinks with gravity when not thrusting
+                if (keys['KeyW'] || keys['ArrowUp']) {
+                    Body.applyForce(boardedSub, boardedSub.position, { x: 0, y: -0.18 * boardedSub.mass });
+                }
+                if (keys['KeyS'] || keys['ArrowDown']) {
+                    Body.applyForce(boardedSub, boardedSub.position, { x: 0, y: 0.10 * boardedSub.mass });
+                }
+                Body.setPosition(skeletonTorso, boardedSub.position);
+                Body.setPosition(skeletonHead, { x: boardedSub.position.x, y: boardedSub.position.y - 35 });
+            } else {
+            // --- CROUCHING MATRIX ASSEMBLY ---
+            if (keys['KeyS'] || keys['ArrowDown']) {
+                if(skeletonTorso.bounds.max.y - skeletonTorso.bounds.min.y > 35) {
+                    Body.scale(skeletonTorso, 1, 0.6);
+                }
+            } else {
+                if(skeletonTorso.bounds.max.y - skeletonTorso.bounds.min.y < 50) {
+                    Body.scale(skeletonTorso, 1, 1.66);
+                }
+            }
+
+            // Locomotion Motors
+            let moving = false;
+            const speed = 5.2;
+
+            if (keys['KeyA'] || keys['ArrowLeft']) {
+                Body.setVelocity(skeletonTorso, { x: -speed, y: skeletonTorso.velocity.y });
+                playerFacingDir = -1; moving = true;
+            }
+            else if (keys['KeyD'] || keys['ArrowRight']) {
+                Body.setVelocity(skeletonTorso, { x: speed, y: skeletonTorso.velocity.y });
+                playerFacingDir = 1; moving = true;
+            }
+
+            if (!moving) {
+                Body.setVelocity(skeletonTorso, { x: skeletonTorso.velocity.x * 0.8, y: skeletonTorso.velocity.y });
+            }
+
+            // Jump
+            if ((keys['KeyW'] || keys['Space'] || keys['ArrowUp']) && Math.abs(skeletonTorso.velocity.y) < 0.25) {
+                Body.setVelocity(skeletonTorso, { x: skeletonTorso.velocity.x, y: -12.5 });
+            }
+            }
+
+            // Specialty Item Field Actions
+            sandboxItems.forEach((item, idx) => {
+                if (item.isAntiGrav) {
+                    Composite.allBodies(world).forEach(b => {
+                        if (!b.isStatic && b.label !== 'water' && b.id !== skeletonHead.id && b.id !== skeletonTorso.id) {
+                            let dist = Vector.magnitude(Vector.sub(b.position, item.position));
+                            if (dist < 200) Body.applyForce(b, b.position, { x: 0, y: -0.0051 * b.mass });
+                        }
+                    });
+                }
+                if (item.isTurret && Date.now() - item.lastShot > 1200) {
+                    let target = npcs.find(n => !n.dead && n.type === 'zombie' && Vector.magnitude(Vector.sub(n.torso.position, item.position)) < 400);
+                    if (target) {
+                        let tDir = Vector.normalise(Vector.sub(target.torso.position, item.position));
+                        shootBullet(tDir, 20, false);
+                        item.lastShot = Date.now();
+                    }
+                }
+                if (item.isImploder) {
+                    // Check if bullet sparked it
+                    let nearBullet = sandboxItems.find(bl => bl.label === 'bullet' && Vector.magnitude(Vector.sub(bl.position, item.position)) < 25);
+                    if (nearBullet) {
+                        triggerImplosionWave(item.position);
+                        Composite.remove(world, item);
+                        sandboxItems.splice(idx, 1);
+                    }
+                }
+                if (item.isPlasmaCell && item.speed > 6) {
+                    triggerExplosion(item.position);
+                    Composite.remove(world, item);
+                    sandboxItems.splice(idx, 1);
+                }
+                if (item.isTNT) {
+                    let nearBullet = sandboxItems.find(bl => bl.label === 'bullet' && Vector.magnitude(Vector.sub(bl.position, item.position)) < 30);
+                    if (nearBullet) {
+                        triggerExplosion(item.position, item.explosionPower || 1);
+                        Composite.remove(world, item);
+                        sandboxItems.splice(idx, 1);
+                    }
+                }
+                if (item.isMine) {
+                    if (!item.triggered) {
+                        let steppedOn = Vector.magnitude(Vector.sub(skeletonTorso.position, item.position)) < 45 ||
+                            npcs.some(n => !n.dead && Vector.magnitude(Vector.sub(n.torso.position, item.position)) < 45);
+                        if (steppedOn) { item.triggered = true; item.triggerTime = Date.now(); }
+                    } else if (Date.now() - item.triggerTime > 400) {
+                        triggerExplosion(item.position);
+                        Composite.remove(world, item);
+                        sandboxItems.splice(idx, 1);
+                    }
+                }
+            });
+
+            // Bullet Collisions
+            sandboxItems.forEach((b, bIdx) => {
+                if (b && b.label === 'bullet') {
+                    npcs.forEach(n => {
+                        if (!n.dead) {
+                            if (Vector.magnitude(Vector.sub(b.position, n.torso.position)) < 35) {
+                                if (b.isRocket) triggerExplosion(b.position);
+                                else damageNPC(n.torso, Vector.normalise(b.velocity));
+                                Composite.remove(world, b); sandboxItems.splice(bIdx, 1);
+                            }
+                        }
+                    });
+                }
+            });
+
+            // NPC Processing & FARNSWORTH CONSTRUCTING ENGINE
+            let activeProf = null;
+            npcs.forEach(n => {
+                if (n.dead) return;
+                Body.setAngle(n.torso, 0);
+
+                if (n.type === 'prof') {
+                    activeProf = n;
+                    const bubble = document.getElementById('dialogue');
+                    bubble.style.left = `${n.torso.position.x - viewX - 70}px`;
+                    bubble.style.top = `${(n.torso.position.y - 95) - viewY}px`;
+
+                    let text = "";
+                    let pDist = Vector.magnitude(Vector.sub(skeletonTorso.position, n.torso.position));
+                    let inRealWater = (n.torso.position.x > OCEAN_START) && (n.torso.position.y > WATER_LINE);
+                    let isGrabbed = (gravGrabbed === n.torso || physGun.body === n.torso);
+
+                    // --- ACTIVE CONSTRUCT MATRIX ACTION ---
+                    if (!isGrabbed && !inRealWater && Date.now() - n.lastBuild > 5000) {
+                        const buildTypes = ['crate', 'heavybeam', 'turret', 'plasmastruct'];
+                        let chosen = buildTypes[Math.floor(Math.random() * buildTypes.length)];
+                        let buildPos = { x: n.torso.position.x + (Math.random() > 0.5 ? 90 : -90), y: n.torso.position.y - 20 };
+                        
+                        spawnProp(chosen, buildPos);
+                        text = "Aha! Behold my newly completed automated defense module!";
+                        n.lastBuild = Date.now();
+                        n.lastSpeech = Date.now() + 2000;
+                    }
+
+                    if (isGrabbed) {
+                        text = "Unhand me, you structural relic! I am too old for physics experiments!";
+                    } else if (inRealWater) {
+                        text = "Merciful heavens, my spectacles are fogging up in this soup!";
+                    } else if (pDist < 110 && Date.now() - n.lastSpeech > 6000) {
+                        text = "Oh! Press E to speak with me, bone-man.";
+                    }
+
+                    if (text !== "") {
+                        bubble.innerText = text;
+                        bubble.style.display = 'block';
+                        n.lastSpeech = Date.now();
+                    } else if (Date.now() - n.lastSpeech > 2500) {
+                        bubble.style.display = 'none';
+                    }
+                }
+                else if (n.type === 'zombie') {
+                    let toPlayer = Vector.sub(skeletonTorso.position, n.torso.position);
+                    let dist = Vector.magnitude(toPlayer);
+                    let d = toPlayer.x > 0 ? 1 : -1;
+                    Body.setVelocity(n.torso, { x: d * 1.8, y: n.torso.velocity.y });
+                    if (dist < 40 && Date.now() - n.lastHit > 900) {
+                        damagePlayer(8);
+                        n.lastHit = Date.now();
+                        Body.setVelocity(skeletonTorso, { x: -d * 6, y: -4 });
+                    }
+                }
+                else if (n.type === 'shark') {
+                    let inWater = n.torso.position.x > OCEAN_START && n.torso.position.y > WATER_LINE;
+                    if (inWater) {
+                        let targetPos = null;
+                        if (playerInSub && boardedSub && boardedSub.position.x > OCEAN_START && boardedSub.position.y > WATER_LINE) targetPos = boardedSub.position;
+                        else if (!playerInSub && skeletonTorso.position.x > OCEAN_START && skeletonTorso.position.y > WATER_LINE) targetPos = skeletonTorso.position;
+
+                        if (targetPos) {
+                            let dir = targetPos.x > n.torso.position.x ? 1 : -1;
+                            Body.setVelocity(n.torso, { x: dir * 2.4, y: n.torso.velocity.y * 0.9 });
+                            let dist = Vector.magnitude(Vector.sub(targetPos, n.torso.position));
+                            if (dist < 55 && Date.now() - n.lastHit > 1200) {
+                                n.lastHit = Date.now();
+                                if (playerInSub && targetPos === boardedSub.position) {
+                                    boardedSub.subHP = Math.max(15, (boardedSub.subHP ?? 100) - 30);
+                                    boardedSub.wasSharkAttacked = true;
+                                    sharkAttackSurvived = true;
+                                    Body.setVelocity(boardedSub, Vector.mult(Vector.normalise(Vector.sub(boardedSub.position, n.torso.position)), 8));
+                                } else if (!playerInSub) {
+                                    damagePlayer(12);
+                                }
+                            }
+                        } else {
+                            Body.setVelocity(n.torso, { x: Math.sin(Date.now() / 900 + n.torso.position.x) * 1.5, y: n.torso.velocity.y * 0.9 });
+                        }
+                    }
+                }
+            });
+            if (!activeProf) document.getElementById('dialogue').style.display = 'none';
+
+            // --- PROGRESSION: reaching the ocean unlocks nautical gear ---
+            if (!reachedOcean) {
+                let checkOceanX = (playerInSub && boardedSub) ? boardedSub.position.x : skeletonTorso.position.x;
+                if (checkOceanX > OCEAN_START) {
+                    reachedOcean = true;
+                    unlockGroup(['submarine', 'shark', 'sword', 'shield']);
+                }
+            }
+
+            // --- DONCAMATIC CHECK ---
+            // Arrived safely at Plastic Beach after having survived a shark attack on a sub.
+            if (!playerDead && sharkAttackSurvived) {
+                let checkX = (playerInSub && boardedSub) ? boardedSub.position.x : skeletonTorso.position.x;
+                if (checkX > PLASTIC_BEACH_START) unlockAchievement('doncamatic');
+            }
+        });
+
+        function triggerExplosion(pos, powerMult = 1) {
+            Composite.allBodies(world).forEach(b => {
+                if (!b.isStatic && b.label !== 'player_bone' && b.label !== 'water') {
+                    let dVec = Vector.sub(b.position, pos);
+                    let dist = Vector.magnitude(dVec);
+                    if (dist < 260) {
+                        let factor = (260 - dist) / 260;
+                        Body.applyForce(b, b.position, Vector.mult(Vector.normalise(dVec), factor * b.mass * 0.035 * powerMult));
+                        npcs.forEach(n => {
+                            if ((n.torso === b || n.head === b) && !n.dead) damageNPC(b, Vector.normalise(dVec));
+                        });
+                        if (b.isGlass) Composite.remove(world, b);
+                    }
+                }
+            });
+        }
+
+        function triggerImplosionWave(pos) {
+            Composite.allBodies(world).forEach(b => {
+                if (!b.isStatic && b.label !== 'player_bone' && b.label !== 'water') {
+                    let dVec = Vector.sub(pos, b.position); // Reversed vector to pull inward
+                    let dist = Vector.magnitude(dVec);
+                    if (dist < 450) {
+                        let factor = (450 - dist) / 450;
+                        Body.applyForce(b, b.position, Vector.mult(Vector.normalise(dVec), factor * b.mass * 0.045));
+                    }
+                }
+            });
+        }
+
+        // --- COLLISION EVENTS: spring pads + sword/shield clash ---
+        Matter.Events.on(engine, 'collisionStart', (event) => {
+            event.pairs.forEach(pair => {
+                const { bodyA, bodyB } = pair;
+
+                let spring = bodyA.isSpring ? bodyA : (bodyB.isSpring ? bodyB : null);
+                if (spring) {
+                    let other = spring === bodyA ? bodyB : bodyA;
+                    if (!other.isStatic && other.label !== 'water') {
+                        Body.setVelocity(other, { x: other.velocity.x, y: -18 });
+                    }
+                }
+
+                if ((bodyA.isSword && bodyB.isShield) || (bodyA.isShield && bodyB.isSword)) {
+                    let relSpeed = Vector.magnitude(Vector.sub(bodyA.velocity, bodyB.velocity));
+                    if (relSpeed > 3) unlockAchievement('raawwr');
+                }
+            });
+        });
+
+        function toggleGravity(e) {
+            blurAll(); gravityOn = !gravityOn;
+            world.gravity.y = gravityOn ? 1 : 0;
+            document.getElementById('grav-btn').innerText = `Gravity: ${gravityOn ? 'ON' : 'OFF'}`;
+        }
+
+        function clearSandbox(e) {
+            blurAll();
+            sandboxItems.forEach(item => Composite.remove(world, item));
+            npcs.forEach(n => {
+                Composite.remove(world, [n.torso, n.head]);
+                if(n.joint) Composite.remove(world, n.joint);
+            });
+            sandboxItems = []; npcs = [];
+            if(gravConstraint) { Composite.remove(world, gravConstraint); gravConstraint = null; gravGrabbed = null; }
+            weldTarget = null;
+        }
+    </script>
+</body>
+</html>
