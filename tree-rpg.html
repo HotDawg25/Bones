@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>Tree RPG</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;background:#0a0c07;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;}
+#wrap{position:relative;width:600px;height:540px;transform-origin:center center;}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;}
+#gameCanvas{position:absolute;top:0;left:0;width:600px;height:540px;}
+#uiCanvas{position:absolute;top:0;left:0;width:600px;height:540px;pointer-events:none;}
+
+/* ── OVERLAYS ── */
+.overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;pointer-events:all;font-family:'Courier New',monospace;}
+
+/* COMBAT */
+#combat{background:rgba(6,8,3,0.97);border-top:3px solid #2a3a18;}
+#combat-arena{width:560px;height:200px;position:relative;background:#081206;border:2px solid #1e3010;border-radius:4px;margin-bottom:10px;overflow:hidden;flex-shrink:0;}
+#arenaCanvas{display:block;}
+#bars{width:100%;display:flex;gap:10px;margin-bottom:8px;}
+.bar-box{flex:1;background:#060803;border:2px solid #2a2010;border-radius:3px;padding:5px 8px;}
+.bar-label{font-size:9px;color:#5a4a2a;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
+.bar-name{font-size:12px;font-weight:bold;color:#c0a860;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{height:9px;background:#080600;border-radius:2px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:2px;transition:width 0.35s ease;}
+.hp-fill{background:linear-gradient(90deg,#27ae60,#2ecc71);}
+.hp-fill.low{background:linear-gradient(90deg,#c0392b,#e74c3c);}
+.hp-text{font-size:9px;color:#6a5a3a;margin-top:2px;}
+#log{width:100%;background:#040602;border:2px solid #1e1808;border-radius:3px;padding:7px 9px;height:58px;overflow:hidden;margin-bottom:8px;flex-shrink:0;}
+#log p{font-size:11px;color:#a89860;line-height:1.5;margin:0;}
+#log p.new{color:#d8c880;}#log p.dmg{color:#e74c3c;}#log p.heal{color:#27ae60;}#log p.info{color:#3498db;}
+#actions{display:flex;gap:7px;width:100%;}
+.act-btn{flex:1;padding:9px 4px;background:#080604;border:2px solid #3a2e10;border-radius:3px;color:#c0a860;font-family:'Courier New',monospace;font-size:11px;font-weight:bold;cursor:pointer;transition:all 0.1s;text-transform:uppercase;letter-spacing:.5px;}
+.act-btn:hover{background:#161004;border-color:#7a6030;color:#e8d080;}
+.act-btn:disabled{opacity:.3;cursor:not-allowed;}
+.act-btn.danger{border-color:#4a1818;color:#c07060;}
+.act-btn.danger:hover{background:#160808;border-color:#8a4040;}
+
+/* STORY / DIALOGUE */
+#story{background:#050702;border:3px solid #1a2a10;}
+#story-scene{width:560px;height:240px;position:relative;overflow:hidden;border:2px solid #1a2a10;border-radius:4px;margin-bottom:14px;flex-shrink:0;}
+#sceneCanvas{display:block;}
+#story-title{font-size:17px;font-weight:bold;color:#d8c060;letter-spacing:2px;text-align:center;margin-bottom:6px;text-shadow:0 0 20px #a08030;}
+#story-text{font-size:12px;color:#a09060;line-height:1.75;text-align:center;max-width:520px;min-height:54px;margin-bottom:8px;}
+#story-sub{font-size:10px;color:#504830;text-align:center;margin-bottom:10px;}
+#story-btn{padding:10px 30px;background:#080602;border:2px solid #5a4820;border-radius:3px;color:#d8c060;font-family:'Courier New',monospace;font-size:12px;font-weight:bold;cursor:pointer;text-transform:uppercase;letter-spacing:1px;transition:all .15s;}
+#story-btn:hover{background:#141006;border-color:#9a8040;}
+
+/* SHOP */
+#shop{background:rgba(3,8,3,0.98);}
+#shop h2{color:#5ae860;font-size:14px;letter-spacing:2px;margin-bottom:3px;}
+#shop-sub{color:#3a5a3a;font-size:10px;margin-bottom:10px;}
+#shop-seeds{color:#a8d050;font-size:11px;margin-bottom:10px;}
+#shop-items{display:flex;flex-direction:column;gap:7px;width:100%;max-height:320px;overflow-y:auto;}
+.shop-item{background:#060c06;border:2px solid #1e381e;border-radius:3px;padding:9px 11px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .12s;}
+.shop-item:hover{background:#0c160c;border-color:#3a683a;}
+.shop-item.bought{opacity:.35;cursor:not-allowed;}
+.shop-icon{width:36px;height:36px;flex-shrink:0;}
+.shop-info{flex:1;}
+.shop-name{font-size:12px;font-weight:bold;color:#88c860;}
+.shop-desc{font-size:10px;color:#486838;margin-top:2px;}
+.shop-cost{font-size:11px;color:#a8d050;font-weight:bold;white-space:nowrap;}
+#shop-close{margin-top:12px;padding:9px 20px;background:#060c06;border:2px solid #1e381e;border-radius:3px;color:#5ae860;font-family:'Courier New',monospace;font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
+#shop-close:hover{background:#0c160c;border-color:#3a683a;}
+
+/* ITEM PANEL */
+#item-panel{background:rgba(5,5,2,0.98);}
+#item-panel h2{color:#d8c060;font-size:13px;letter-spacing:2px;margin-bottom:10px;}
+#item-list{display:flex;flex-direction:column;gap:6px;width:100%;max-height:340px;overflow-y:auto;}
+.inv-item{background:#080604;border:2px solid #2a2010;border-radius:3px;padding:8px 11px;display:flex;align-items:center;gap:9px;cursor:pointer;transition:all .12s;}
+.inv-item:hover{background:#140e04;border-color:#5a4820;}
+.inv-icon{width:28px;height:28px;flex-shrink:0;}
+.inv-info{flex:1;}.inv-name{font-size:12px;color:#c0a060;font-weight:bold;}.inv-desc{font-size:10px;color:#605040;margin-top:1px;}
+.inv-qty{font-size:11px;color:#807050;font-weight:bold;}
+#item-back{margin-top:10px;padding:8px;background:#080604;border:2px solid #2a2010;border-radius:3px;color:#c0a060;font-family:'Courier New',monospace;font-size:11px;cursor:pointer;text-transform:uppercase;letter-spacing:1px;}
+
+/* ENDING */
+#ending{background:#050702;}
+#ending h1{font-size:22px;color:#d8c060;margin-bottom:12px;text-shadow:0 0 25px #a08030;text-align:center;letter-spacing:1px;}
+#end-story{font-size:12px;color:#a09060;line-height:1.8;max-width:500px;text-align:center;margin-bottom:16px;}
+.reality{font-size:11px;color:#888;font-style:italic;line-height:1.8;max-width:480px;text-align:center;border-top:1px solid #222;padding-top:14px;margin-top:4px;}
+#restart{padding:11px 28px;background:#080602;border:2px solid #5a4820;border-radius:3px;color:#d8c060;font-family:'Courier New',monospace;font-size:12px;font-weight:bold;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-top:14px;}
+#restart:hover{background:#141006;border-color:#9a8040;}
+
+/* HUD */
+#hud{position:absolute;top:6px;left:6px;right:6px;display:flex;justify-content:space-between;pointer-events:none;z-index:10;}
+#hud-left,#hud-right{background:rgba(4,5,2,0.88);border:1px solid #2a2010;border-radius:3px;padding:4px 8px;font-family:'Courier New',monospace;font-size:10px;color:#a09050;}
+#hud-hp-bar{display:inline-block;width:70px;height:7px;background:#0a0800;border:1px solid #2a2010;border-radius:1px;vertical-align:middle;margin-left:4px;overflow:hidden;}
+#hud-hp-fill{height:100%;background:#27ae60;transition:width .3s;}
+#zone-flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(3,5,2,0.95);border:2px solid #2a4a18;border-radius:4px;padding:12px 24px;color:#88cc50;font-family:'Courier New',monospace;font-size:15px;font-weight:bold;letter-spacing:2px;text-align:center;display:none;pointer-events:none;text-shadow:0 0 12px #50aa28;z-index:50;}
+
+/* ── MOBILE D-PAD ── */
+#dpad{position:absolute;left:16px;bottom:16px;width:140px;height:140px;display:none;z-index:12;}
+body.is-touch #dpad{display:block;}
+.dpad-btn{position:absolute;width:46px;height:46px;background:rgba(216,192,96,0.15);border:2px solid rgba(216,192,96,0.4);border-radius:8px;color:#d8c060;font-size:20px;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;}
+.dpad-btn:active{background:rgba(216,192,96,0.35);}
+#dpad-up{left:47px;top:0;} #dpad-down{left:47px;top:94px;}
+#dpad-left{left:0;top:47px;} #dpad-right{left:94px;top:47px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="gameCanvas" width="600" height="540"></canvas>
+  <canvas id="uiCanvas" width="600" height="540"></canvas>
+
+  <div id="dpad">
+    <div class="dpad-btn" id="dpad-up">▲</div>
+    <div class="dpad-btn" id="dpad-down">▼</div>
+    <div class="dpad-btn" id="dpad-left">◄</div>
+    <div class="dpad-btn" id="dpad-right">►</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hud-left">HP <span id="hud-hp-val">30/30</span><span id="hud-hp-bar"><span id="hud-hp-fill" style="width:100%"></span></span></div>
+    <div id="hud-right">🌱 <span id="hud-seeds">0</span> &nbsp;|&nbsp; <span id="hud-weapon">Stick</span></div>
+  </div>
+  <div id="zone-flash"></div>
+
+  <!-- STORY PANEL -->
+  <div class="overlay" id="story" style="display:flex;">
+    <div id="story-scene"><canvas id="sceneCanvas" width="560" height="240"></canvas></div>
+    <div id="story-title">TREE RPG</div>
+    <div id="story-text">Loading...</div>
+    <div id="story-sub"></div>
+    <button id="story-btn" onclick="storyNext()">► Continue</button>
+  </div>
+
+  <!-- COMBAT PANEL -->
+  <div class="overlay" id="combat">
+    <div id="combat-arena"><canvas id="arenaCanvas" width="560" height="200"></canvas></div>
+    <div id="bars">
+      <div class="bar-box"><div class="bar-label">You</div><div class="bar-name" id="p-name">Kid</div><div class="bar-track"><div class="bar-fill hp-fill" id="p-hp-bar" style="width:100%"></div></div><div class="hp-text" id="p-hp-text">30/30</div></div>
+      <div class="bar-box"><div class="bar-label">Enemy</div><div class="bar-name" id="e-name">???</div><div class="bar-track"><div class="bar-fill hp-fill" id="e-hp-bar" style="width:100%"></div></div><div class="hp-text" id="e-hp-text">?/?</div></div>
+    </div>
+    <div id="log"><p class="new" id="log-line1"></p><p id="log-line2"></p><p id="log-line3"></p></div>
+    <div id="actions">
+      <button class="act-btn" id="btn-attack" onclick="combatAction('attack')">⚔ Attack</button>
+      <button class="act-btn" id="btn-special" onclick="combatAction('special')">★ Special</button>
+      <button class="act-btn" id="btn-item" onclick="openItemPanel()">≡ Items</button>
+      <button class="act-btn danger" id="btn-run" onclick="combatAction('run')">↩ Run</button>
+    </div>
+  </div>
+
+  <!-- ITEM PANEL -->
+  <div class="overlay" id="item-panel">
+    <h2>BAG</h2>
+    <div id="item-list"></div>
+    <button id="item-back" onclick="closeItemPanel()">◄ Back</button>
+  </div>
+
+  <!-- SHOP -->
+  <div class="overlay" id="shop">
+    <h2>SPROUT CAMP</h2>
+    <div id="shop-sub">A friendly sprout rustles at you knowingly.</div>
+    <div id="shop-seeds">You have <span id="shop-seed-count">0</span> seeds</div>
+    <div id="shop-items"></div>
+    <button id="shop-close" onclick="closeShop()">► Leave Camp</button>
+  </div>
+
+  <!-- ENDING -->
+  <div class="overlay" id="ending">
+    <h1 id="end-title">THE GREAT WARRIOR... FALLS</h1>
+    <p id="end-story"></p>
+    <div class="reality" id="end-reality"></div>
+    <button id="restart" onclick="location.reload()">↩ Play Again</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// TREE RPG v2 — pixel-art characters, camera, canvas cutscenes
+// ═══════════════════════════════════════════════════════════════
+
+const gc  = document.getElementById('gameCanvas');
+const gx  = gc.getContext('2d');
+const sc  = document.getElementById('sceneCanvas');
+const sx  = sc.getContext('2d');
+const arc = document.getElementById('arenaCanvas');
+const ax  = arc.getContext('2d');
+
+const W=600, H=540;
+const TW=32;          // tile pixels
+const COLS=50, ROWS=50; // map size - big, camera follows player
+const VIEW_COLS=Math.ceil(W/TW)+1; // ~19 visible columns
+const VIEW_ROWS=Math.ceil(H/TW)+1; // ~17 visible rows
+
+// ── PIXEL-ART SPRITE LIBRARY ─────────────────────────────────
+// All sprites are drawn programmatically with ctx.fillRect calls.
+// Each function draws a character centred at (cx,cy) at scale s.
+
+const SPR = {
+
+  // ── KID (player) ──────────────────────────────────────────
+  kid(ctx, cx, cy, s=1, facing=1, step=0) {
+    const bob = Math.sin(step*0.35)*1.5*s;
+    const legSwing = Math.sin(step*0.35)*2*s;
+    // shadow
+    ctx.fillStyle='rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+14*s,7*s,3*s,0,0,Math.PI*2); ctx.fill();
+    // legs
+    ctx.fillStyle='#4a6a9a';
+    ctx.fillRect(cx-4*s, cy+3*s+bob,  4*s, 8*s); // left leg
+    ctx.fillRect(cx,     cy+3*s+bob+legSwing*facing, 4*s, 8*s); // right leg
+    // shoes
+    ctx.fillStyle='#2a2a2a';
+    ctx.fillRect(cx-5*s, cy+11*s+bob, 5*s, 3*s);
+    ctx.fillRect(cx,     cy+11*s+bob+legSwing*facing, 5*s, 3*s);
+    // body - red tshirt
+    ctx.fillStyle='#c03020';
+    ctx.fillRect(cx-5*s, cy-5*s+bob, 10*s, 9*s);
+    // arms
+    ctx.fillStyle='#c8905a';
+    if(facing===1){
+      ctx.fillRect(cx-8*s, cy-4*s+bob, 3*s, 7*s);
+      ctx.fillRect(cx+5*s, cy-4*s+bob-legSwing, 3*s, 7*s);
+    } else {
+      ctx.fillRect(cx+5*s, cy-4*s+bob, 3*s, 7*s);
+      ctx.fillRect(cx-8*s, cy-4*s+bob+legSwing, 3*s, 7*s);
+    }
+    // neck
+    ctx.fillStyle='#c8905a';
+    ctx.fillRect(cx-2*s, cy-8*s+bob, 4*s, 4*s);
+    // head
+    ctx.fillStyle='#d8a06a';
+    ctx.fillRect(cx-6*s, cy-17*s+bob, 12*s, 10*s);
+    // hair (brown, messy)
+    ctx.fillStyle='#5a3010';
+    ctx.fillRect(cx-6*s, cy-17*s+bob, 12*s, 4*s);
+    ctx.fillRect(cx-7*s, cy-16*s+bob, 2*s, 3*s);
+    ctx.fillRect(cx+5*s, cy-16*s+bob, 2*s, 3*s);
+    // eyes
+    ctx.fillStyle='#1a1a1a';
+    ctx.fillRect(cx+(facing>0?1:-3)*s, cy-12*s+bob, 2*s, 2*s);
+    ctx.fillRect(cx+(facing>0?4:-1)*s-1*s, cy-12*s+bob, 1*s, 2*s);
+    // mouth smile
+    ctx.fillStyle='#7a4030';
+    ctx.fillRect(cx+(facing>0?1:-3)*s, cy-9*s+bob, 4*s, 1*s);
+    // stick
+    ctx.strokeStyle='#8a5020'; ctx.lineWidth=2*s; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(cx+(facing>0?7:-7)*s, cy-2*s+bob);
+    ctx.lineTo(cx+(facing>0?20:-20)*s, cy-18*s+bob);
+    ctx.stroke();
+  },
+
+  // ── KID (big, for cutscene) ───────────────────────────────
+  kidBig(ctx, cx, cy, s=2, facing=1, step=0) {
+    SPR.kid(ctx, cx, cy, s, facing, step);
+  },
+
+  // ── GRUMPY FERN ───────────────────────────────────────────
+  grumpyFern(ctx, cx, cy, s=1, hp=1) {
+    const wobble = Math.sin(Date.now()*0.003)*2*s;
+    ctx.fillStyle='rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+10*s,10*s,3*s,0,0,Math.PI*2); ctx.fill();
+    // stem
+    ctx.fillStyle='#2a5a18';
+    ctx.fillRect(cx-2*s,cy-4*s,4*s,14*s);
+    // fronds
+    const fc='#3a8a20';
+    ctx.fillStyle=fc;
+    for(let i=0;i<5;i++){
+      const a=(-1+i*0.5)*Math.PI*0.35+wobble*0.04;
+      const len=(12+i%3*4)*s;
+      ctx.save(); ctx.translate(cx,cy-2*s);
+      ctx.rotate(a); ctx.fillRect(-2*s,-len,4*s,len); ctx.restore();
+    }
+    // angry eyes
+    ctx.fillStyle='#e03030';
+    ctx.fillRect(cx-5*s,cy-6*s+wobble,3*s,3*s);
+    ctx.fillRect(cx+2*s,cy-6*s+wobble,3*s,3*s);
+    ctx.fillStyle='#ff6060';
+    ctx.fillRect(cx-4*s,cy-5*s+wobble,1*s,1*s);
+    ctx.fillRect(cx+3*s,cy-5*s+wobble,1*s,1*s);
+  },
+
+  // ── ANGRY DAISY ───────────────────────────────────────────
+  angryDaisy(ctx, cx, cy, s=1) {
+    const w=Math.sin(Date.now()*0.004)*3*s;
+    ctx.fillStyle='rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+10*s,8*s,2.5*s,0,0,Math.PI*2); ctx.fill();
+    // stem
+    ctx.fillStyle='#3a7a10';
+    ctx.fillRect(cx-2*s,cy,4*s,10*s);
+    // petals
+    const petals=8;
+    for(let i=0;i<petals;i++){
+      const a=(i/petals)*Math.PI*2;
+      ctx.fillStyle= i%2===0?'#f0e050':'#e8d040';
+      ctx.save(); ctx.translate(cx+Math.cos(a)*7*s+w*Math.cos(a)*0.3,cy-2*s+Math.sin(a)*7*s+w*Math.sin(a)*0.3);
+      ctx.rotate(a); ctx.fillRect(-2*s,-4*s,4*s,8*s); ctx.restore();
+    }
+    // centre
+    ctx.fillStyle='#e07020';
+    ctx.beginPath(); ctx.arc(cx,cy-2*s,5*s,0,Math.PI*2); ctx.fill();
+    // face
+    ctx.fillStyle='#601010';
+    ctx.fillRect(cx-3*s,cy-4*s,2*s,2*s);
+    ctx.fillRect(cx+1*s,cy-4*s,2*s,2*s);
+    ctx.fillRect(cx-2*s,cy,4*s,1*s);
+  },
+
+  // ── ROOT CREEP ────────────────────────────────────────────
+  rootCreep(ctx, cx, cy, s=1) {
+    const w=Math.sin(Date.now()*0.005)*2*s;
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+8*s,9*s,3*s,0,0,Math.PI*2); ctx.fill();
+    // roots crawling
+    ctx.strokeStyle='#5a3a10'; ctx.lineWidth=3*s; ctx.lineCap='round';
+    for(let i=0;i<4;i++){
+      const side=i<2?-1:1, offset=(i%2)*6*s;
+      ctx.beginPath();
+      ctx.moveTo(cx+side*3*s,cy+4*s);
+      ctx.quadraticCurveTo(cx+side*12*s+offset,cy+2*s+w,cx+side*18*s+offset,cy+8*s);
+      ctx.stroke();
+    }
+    // body bulge
+    ctx.fillStyle='#7a5020';
+    ctx.beginPath(); ctx.ellipse(cx,cy,7*s,9*s,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#5a3a10';
+    ctx.beginPath(); ctx.ellipse(cx,cy+1*s,5*s,7*s,0,0,Math.PI*2); ctx.fill();
+    // one cyclopean eye
+    ctx.fillStyle='#d04010';
+    ctx.beginPath(); ctx.arc(cx,cy-1*s,3*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#600';
+    ctx.beginPath(); ctx.arc(cx,cy-1*s,1.5*s,0,Math.PI*2); ctx.fill();
+  },
+
+  // ── THORNED BRIER ─────────────────────────────────────────
+  thornedBrier(ctx, cx, cy, s=1) {
+    const w=Math.sin(Date.now()*0.003)*2*s;
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+12*s,13*s,4*s,0,0,Math.PI*2); ctx.fill();
+    // main body ball
+    ctx.fillStyle='#1a4010';
+    ctx.beginPath(); ctx.arc(cx+w,cy,11*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#234e16';
+    ctx.beginPath(); ctx.arc(cx+w-2*s,cy-2*s,8*s,0,Math.PI*2); ctx.fill();
+    // thorns
+    ctx.fillStyle='#c0c0c0';
+    for(let i=0;i<10;i++){
+      const a=(i/10)*Math.PI*2;
+      const r=10*s; const len=5*s;
+      ctx.save(); ctx.translate(cx+w+Math.cos(a)*r, cy+Math.sin(a)*r);
+      ctx.rotate(a); ctx.fillRect(-1*s,0,2*s,len*s); ctx.restore();
+    }
+    // roses
+    for(let i=0;i<4;i++){
+      const a=(i/4)*Math.PI*2+0.3;
+      const rx=cx+w+Math.cos(a)*7*s, ry=cy+Math.sin(a)*7*s;
+      ctx.fillStyle='#c02050';
+      ctx.beginPath(); ctx.arc(rx,ry,3*s,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#e03068';
+      ctx.beginPath(); ctx.arc(rx-s,ry-s,1.5*s,0,Math.PI*2); ctx.fill();
+    }
+    // eyes
+    ctx.fillStyle='#ff2020';
+    ctx.fillRect(cx+w-4*s,cy-3*s,3*s,3*s);
+    ctx.fillRect(cx+w+1*s,cy-3*s,3*s,3*s);
+  },
+
+  // ── VINED WATCHER ─────────────────────────────────────────
+  vinedWatcher(ctx, cx, cy, s=1) {
+    const t=Date.now()*0.003;
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+14*s,10*s,3*s,0,0,Math.PI*2); ctx.fill();
+    // 8 vine arms waving
+    for(let i=0;i<8;i++){
+      const a=(i/8)*Math.PI*2;
+      const wave=Math.sin(t+i*0.8)*4*s;
+      ctx.strokeStyle=i%2===0?'#2a6010':'#387018'; ctx.lineWidth=3*s;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.quadraticCurveTo(cx+Math.cos(a)*14*s+wave,cy+Math.sin(a)*14*s+wave,cx+Math.cos(a)*22*s,cy+Math.sin(a)*22*s);
+      ctx.stroke();
+      // leaflet at tip
+      ctx.fillStyle='#3a8020';
+      ctx.save(); ctx.translate(cx+Math.cos(a)*22*s,cy+Math.sin(a)*22*s);
+      ctx.rotate(a); ctx.fillRect(-2*s,-4*s,4*s,8*s); ctx.restore();
+    }
+    // central body
+    ctx.fillStyle='#1e5010';
+    ctx.beginPath(); ctx.ellipse(cx,cy,8*s,10*s,0,0,Math.PI*2); ctx.fill();
+    // face
+    ctx.fillStyle='#ffe060'; ctx.beginPath(); ctx.arc(cx-3*s,cy-2*s,2.5*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+3*s,cy-2*s,2.5*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#303010'; ctx.beginPath(); ctx.arc(cx-3*s,cy-2*s,1.2*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+3*s,cy-2*s,1.2*s,0,Math.PI*2); ctx.fill();
+  },
+
+  // ── PINE GHOUL ────────────────────────────────────────────
+  pineGhoul(ctx, cx, cy, s=1) {
+    const sw=Math.sin(Date.now()*0.002)*3*s;
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+20*s,10*s,3*s,0,0,Math.PI*2); ctx.fill();
+    // trunk
+    ctx.fillStyle='#4a2e10';
+    ctx.fillRect(cx-4*s,cy+4*s,8*s,16*s);
+    // tree crown layers
+    const layers=['#0a2e06','#0e3a08','#12440a'];
+    for(let i=0;i<3;i++){
+      ctx.fillStyle=layers[i];
+      const pts=[[cx+sw,cy-20*s-i*8*s],[cx-16*s+sw,cy-4*s-i*8*s],[cx+16*s+sw,cy-4*s-i*8*s]];
+      ctx.beginPath(); ctx.moveTo(...pts[0]); ctx.lineTo(...pts[1]); ctx.lineTo(...pts[2]); ctx.closePath(); ctx.fill();
+    }
+    // ghost eyes glowing
+    ctx.fillStyle='#ff4020';
+    ctx.beginPath(); ctx.arc(cx-5*s+sw,cy-14*s,3*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+5*s+sw,cy-14*s,3*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ff8060';
+    ctx.beginPath(); ctx.arc(cx-5*s+sw,cy-14*s,1.5*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+5*s+sw,cy-14*s,1.5*s,0,Math.PI*2); ctx.fill();
+    // falling pinecone
+    const pc=((Date.now()*0.05)%100);
+    ctx.fillStyle='#6a4020';
+    ctx.beginPath(); ctx.ellipse(cx+8*s+sw,cy-30*s+pc*s,3*s,4*s,0,0,Math.PI*2); ctx.fill();
+  },
+
+  // ── ACORN GOLEM ───────────────────────────────────────────
+  acornGolem(ctx, cx, cy, s=1) {
+    const bob=Math.sin(Date.now()*0.004)*3*s;
+    ctx.fillStyle='rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+16*s,13*s,4*s,0,0,Math.PI*2); ctx.fill();
+    // legs (stubby)
+    ctx.fillStyle='#6a4010';
+    ctx.fillRect(cx-9*s,cy+6*s+bob,6*s,10*s);
+    ctx.fillRect(cx+3*s,cy+6*s+bob,6*s,10*s);
+    // arms (acorn-shell arms)
+    ctx.fillStyle='#8a5820';
+    ctx.fillRect(cx-15*s,cy-4*s+bob,6*s,8*s);
+    ctx.fillRect(cx+9*s,cy-4*s+bob,6*s,8*s);
+    // body - acorn cap brown
+    ctx.fillStyle='#7a4c18';
+    ctx.beginPath(); ctx.ellipse(cx,cy-2*s+bob,13*s,8*s,0,0,Math.PI*2); ctx.fill();
+    // body - acorn nut tan
+    ctx.fillStyle='#c89040';
+    ctx.beginPath(); ctx.ellipse(cx,cy+5*s+bob,11*s,12*s,0,0,Math.PI*2); ctx.fill();
+    // face
+    ctx.fillStyle='#1a0a00';
+    ctx.fillRect(cx-5*s,cy+2*s+bob,3*s,3*s);
+    ctx.fillRect(cx+2*s,cy+2*s+bob,3*s,3*s);
+    ctx.fillStyle='#7a2010';
+    ctx.fillRect(cx-4*s,cy+6*s+bob,8*s,2*s); // angry brow
+    ctx.fillRect(cx-3*s,cy+9*s+bob,6*s,2*s); // mouth
+  },
+
+  // ── CANOPY SHADE ──────────────────────────────────────────
+  canopyShade(ctx, cx, cy, s=1) {
+    const t=Date.now()*0.002;
+    const pulse=Math.sin(t)*0.15+0.85;
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+18*s,14*s*pulse,4*s,0,0,Math.PI*2); ctx.fill();
+    // dark mass
+    ctx.fillStyle=`rgba(8,16,4,${pulse})`;
+    ctx.beginPath(); ctx.ellipse(cx,cy,18*s,20*s,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=`rgba(4,10,2,${pulse})`;
+    ctx.beginPath(); ctx.ellipse(cx+3*s,cy-4*s,14*s,16*s,0,0,Math.PI*2); ctx.fill();
+    // tendrils
+    for(let i=0;i<6;i++){
+      const a=(i/6)*Math.PI*2+t*0.3;
+      ctx.strokeStyle=`rgba(12,30,6,${pulse})`; ctx.lineWidth=4*s;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy+10*s);
+      ctx.quadraticCurveTo(cx+Math.cos(a)*24*s,cy+Math.sin(a)*20*s,cx+Math.cos(a+0.5)*30*s,cy+10*s+Math.sin(a)*12*s);
+      ctx.stroke();
+    }
+    // glowing purple eyes
+    ctx.fillStyle='#cc44ff';
+    ctx.beginPath(); ctx.arc(cx-6*s,cy-2*s,4*s*pulse,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+6*s,cy-2*s,4*s*pulse,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ff88ff';
+    ctx.beginPath(); ctx.arc(cx-6*s,cy-2*s,2*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+6*s,cy-2*s,2*s,0,Math.PI*2); ctx.fill();
+  },
+
+  // ── SPLINTERED SENTRY (boss 1) ────────────────────────────
+  splinteredSentry(ctx, cx, cy, s=1) {
+    const t=Date.now()*0.003;
+    const shk=Math.sin(t*3.1)*2*s;
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+22*s,18*s,5*s,0,0,Math.PI*2); ctx.fill();
+    // massive bush body
+    ctx.fillStyle='#1a3808';
+    ctx.beginPath(); ctx.ellipse(cx+shk,cy,20*s,22*s,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#24500a';
+    ctx.beginPath(); ctx.ellipse(cx+shk-3*s,cy-5*s,15*s,17*s,0,0,Math.PI*2); ctx.fill();
+    // thorns
+    ctx.fillStyle='#ddd';
+    for(let i=0;i<16;i++){
+      const a=(i/16)*Math.PI*2+t*0.1;
+      const r=19*s;
+      ctx.save(); ctx.translate(cx+shk+Math.cos(a)*r,cy+Math.sin(a)*r*0.85);
+      ctx.rotate(a);
+      ctx.fillRect(-1*s,0,2*s,7*s);
+      ctx.restore();
+    }
+    // rose blossoms
+    for(let i=0;i<6;i++){
+      const a=(i/6)*Math.PI*2;
+      const rx=cx+shk+Math.cos(a)*12*s, ry=cy+Math.sin(a)*11*s;
+      ctx.fillStyle='#d02060';
+      ctx.beginPath(); ctx.arc(rx,ry,4*s,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ff3070'; ctx.beginPath(); ctx.arc(rx-s,ry-s,2*s,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#801030'; ctx.beginPath(); ctx.arc(rx,ry,1.5*s,0,Math.PI*2); ctx.fill();
+    }
+    // splinters flying
+    for(let i=0;i<5;i++){
+      const sa=(i*2.2+t)*1.5;
+      const sd=20+i*4;
+      ctx.fillStyle='#c8a060';
+      ctx.save(); ctx.translate(cx+shk+Math.cos(sa)*sd*s,cy+Math.sin(sa)*sd*s*0.7);
+      ctx.rotate(sa); ctx.fillRect(-1*s,-4*s,2*s,8*s); ctx.restore();
+    }
+    // FACE
+    ctx.fillStyle='#ff1010';
+    ctx.fillRect(cx+shk-8*s,cy-6*s,5*s,5*s);
+    ctx.fillRect(cx+shk+3*s,cy-6*s,5*s,5*s);
+    ctx.fillStyle='#ff6040';
+    ctx.fillRect(cx+shk-7*s,cy-5*s,3*s,3*s);
+    ctx.fillRect(cx+shk+4*s,cy-5*s,3*s,3*s);
+    // angry brow
+    ctx.fillStyle='#080c04';
+    ctx.fillRect(cx+shk-10*s,cy-10*s,9*s,3*s);
+    ctx.fillRect(cx+shk+1*s,cy-10*s,9*s,3*s);
+    // mouth
+    ctx.fillStyle='#800';
+    ctx.fillRect(cx+shk-6*s,cy+2*s,12*s,3*s);
+    for(let i=0;i<5;i++) {
+      ctx.fillStyle='#ddd';
+      ctx.fillRect(cx+shk-5*s+i*2.4*s, cy+2*s, 1.5*s, 3*s);
+    }
+  },
+
+  // ── SPROUT SCOUT (boss 2) ─────────────────────────────────
+  sproutScout(ctx, cx, cy, s=1, step=0) {
+    const march=Math.sin(step*0.4)*3*s;
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+16*s,9*s,3*s,0,0,Math.PI*2); ctx.fill();
+    // legs marching
+    ctx.fillStyle='#3a5a28';
+    ctx.fillRect(cx-5*s, cy+4*s+march, 4*s, 10*s);
+    ctx.fillRect(cx+1*s, cy+4*s-march, 4*s, 10*s);
+    // boots
+    ctx.fillStyle='#1a1a10';
+    ctx.fillRect(cx-6*s,cy+13*s+march,5*s,3*s);
+    ctx.fillRect(cx,cy+13*s-march,5*s,3*s);
+    // body - scout uniform (mossy green)
+    ctx.fillStyle='#3a5a20';
+    ctx.fillRect(cx-6*s,cy-7*s,12*s,12*s);
+    // moss patches on uniform
+    ctx.fillStyle='#2a8020';
+    ctx.fillRect(cx-4*s,cy-5*s,3*s,3*s);
+    ctx.fillRect(cx+1*s,cy-2*s,4*s,3*s);
+    ctx.fillRect(cx-3*s,cy+1*s,2*s,2*s);
+    // neckerchief
+    ctx.fillStyle='#c03020';
+    ctx.fillRect(cx-3*s,cy-7*s,6*s,3*s);
+    // arms
+    ctx.fillStyle='#4a6a30';
+    ctx.fillRect(cx-9*s,cy-6*s,4*s,7*s);
+    ctx.fillRect(cx+5*s,cy-6*s-march,4*s,7*s);
+    // SHOVEL in right hand
+    ctx.strokeStyle='#7a5020'; ctx.lineWidth=2*s;
+    ctx.beginPath();
+    ctx.moveTo(cx+7*s, cy-6*s-march);
+    ctx.lineTo(cx+14*s, cy-20*s);
+    ctx.stroke();
+    ctx.fillStyle='#606060';
+    ctx.fillRect(cx+9*s,cy-24*s,6*s,5*s);
+    // head
+    ctx.fillStyle='#c8a870';
+    ctx.fillRect(cx-5*s,cy-16*s,10*s,10*s);
+    // scout hat (khaki, tilted)
+    ctx.fillStyle='#8a7040';
+    ctx.fillRect(cx-7*s,cy-19*s,14*s,4*s); // brim
+    ctx.fillStyle='#786030';
+    ctx.fillRect(cx-5*s,cy-23*s,10*s,5*s); // crown
+    ctx.fillStyle='#c08030';
+    ctx.fillRect(cx-5*s,cy-24*s,10*s,2*s); // band
+    // face
+    ctx.fillStyle='#1a1a0a';
+    ctx.fillRect(cx-3*s,cy-13*s,2*s,2*s);
+    ctx.fillRect(cx+1*s,cy-13*s,2*s,2*s);
+    // determined mouth
+    ctx.fillStyle='#7a4030';
+    ctx.fillRect(cx-3*s,cy-10*s,6*s,2*s);
+    // badge
+    ctx.fillStyle='#d0a020';
+    ctx.beginPath(); ctx.arc(cx+2*s,cy-3*s,2*s,0,Math.PI*2); ctx.fill();
+  },
+
+  // ── MIGHTY TREE (boss 3) ──────────────────────────────────
+  mightyTree(ctx, cx, cy, s=1) {
+    const sw=Math.sin(Date.now()*0.0015)*4*s;
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+16*s,14*s,4*s,0,0,Math.PI*2); ctx.fill();
+    // thick trunk
+    ctx.fillStyle='#4a3010';
+    ctx.fillRect(cx-8*s,cy-12*s,16*s,28*s);
+    ctx.fillStyle='#3a2208';
+    ctx.fillRect(cx-6*s,cy-10*s,3*s,26*s);
+    ctx.fillRect(cx+3*s,cy-10*s,3*s,26*s);
+    // root buttresses
+    ctx.fillStyle='#3a2808';
+    ctx.fillRect(cx-14*s,cy+8*s,6*s,8*s);
+    ctx.fillRect(cx+8*s,cy+8*s,6*s,8*s);
+    // MASSIVE crown (3 layers, each taller)
+    const crowns=[
+      {c:'#0c2a06',w:22,h:18,yoff:0},
+      {c:'#103408',w:18,h:15,yoff:-14},
+      {c:'#143c0a',w:12,h:12,yoff:-25},
+    ];
+    crowns.forEach(({c,w,h,yoff})=>{
+      ctx.fillStyle=c;
+      ctx.beginPath();
+      ctx.moveTo(cx+sw,cy-40*s+yoff*s);
+      ctx.lineTo(cx-w*s+sw,cy-24*s+yoff*s);
+      ctx.lineTo(cx+w*s+sw,cy-24*s+yoff*s);
+      ctx.closePath(); ctx.fill();
+    });
+    // extra crown top
+    ctx.fillStyle='#1a4e0c';
+    ctx.beginPath();
+    ctx.moveTo(cx+sw,cy-68*s);
+    ctx.lineTo(cx-8*s+sw,cy-54*s);
+    ctx.lineTo(cx+8*s+sw,cy-54*s);
+    ctx.closePath(); ctx.fill();
+    // FACE - high up in the crown
+    ctx.fillStyle='#ffaa20';
+    ctx.beginPath(); ctx.arc(cx-6*s+sw,cy-30*s,4*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+6*s+sw,cy-30*s,4*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#ff5000';
+    ctx.beginPath(); ctx.arc(cx-6*s+sw,cy-30*s,2.5*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+6*s+sw,cy-30*s,2.5*s,0,Math.PI*2); ctx.fill();
+    // smug mouth
+    ctx.fillStyle='#2a1208';
+    ctx.beginPath(); ctx.arc(cx+sw,cy-24*s,3*s,0,Math.PI); ctx.fill();
+    // falling pinecones (3)
+    for(let i=0;i<3;i++){
+      const pc=((Date.now()*0.04+i*33)%100);
+      const px=cx+sw+(i-1)*12*s;
+      ctx.fillStyle='#7a4a20';
+      ctx.beginPath(); ctx.ellipse(px,cy-70*s+pc*s,3*s,4*s,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#5a3010';
+      for(let j=0;j<3;j++) ctx.fillRect(px-2*s,cy-70*s+pc*s-3*s+j*2.5*s,4*s,1.5*s);
+    }
+  },
+
+  // ── THE GREAT WARRIOR (final boss) ────────────────────────
+  greatWarrior(ctx, cx, cy, s=1, phase=1) {
+    const t=Date.now()*0.002;
+    const rage=Math.sin(t*3)*3*s*(phase-0.5);
+    const anger=phase>=2?'rgba(180,20,20,0.15)':'rgba(0,0,0,0)';
+    // aura
+    if(phase>=2){
+      ctx.fillStyle=phase>=3?'rgba(200,20,20,0.25)':'rgba(100,20,20,0.15)';
+      ctx.beginPath(); ctx.ellipse(cx+rage,cy,30*s*(1+Math.sin(t)*0.05),35*s*(1+Math.sin(t+1)*0.05),0,0,Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+22*s,18*s,5*s,0,0,Math.PI*2); ctx.fill();
+    // ROOTS spreading from base
+    for(let i=0;i<8;i++){
+      const a=(i/8)*Math.PI+Math.PI*0.1+t*0.05;
+      ctx.strokeStyle=phase>=3?'#600':'#2a1808'; ctx.lineWidth=4*s;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy+15*s);
+      ctx.quadraticCurveTo(cx+Math.cos(a)*30*s,cy+20*s+Math.sin(a)*10*s,cx+Math.cos(a)*50*s,cy+22*s);
+      ctx.stroke();
+    }
+    // trunk - massive
+    ctx.fillStyle='#3a2408';
+    ctx.fillRect(cx-10*s,cy-20*s+rage,20*s,35*s);
+    ctx.fillStyle='#2a1806';
+    ctx.fillRect(cx-7*s,cy-18*s+rage,4*s,33*s);
+    // branches reaching out
+    const bcol=phase>=3?'#500':'#0a1e04';
+    for(let i=0;i<6;i++){
+      const a=i<3?(-0.6+i*0.4)*Math.PI+t*0.05:(0.1+i*0.3)*Math.PI+t*0.05;
+      ctx.strokeStyle=bcol; ctx.lineWidth=4*s;
+      ctx.beginPath();
+      ctx.moveTo(cx+rage,cy-10*s+i*3*s);
+      ctx.quadraticCurveTo(cx+Math.cos(a)*25*s+rage, cy-20*s+i*3*s, cx+Math.cos(a)*38*s, cy-12*s+i*3*s);
+      ctx.stroke();
+      // leaf cluster at branch end
+      ctx.fillStyle=phase>=3?'#1a0000':'#081a04';
+      ctx.beginPath(); ctx.arc(cx+Math.cos(a)*38*s, cy-12*s+i*3*s, 6*s,0,Math.PI*2); ctx.fill();
+    }
+    // CROWN - top of the warrior
+    const ccol=phase>=3?'#200':'#082006';
+    const ccol2=phase>=3?'#400':'#103008';
+    ctx.fillStyle=ccol;
+    ctx.beginPath();
+    ctx.moveTo(cx+rage,cy-60*s);
+    ctx.lineTo(cx-26*s+rage,cy-30*s);
+    ctx.lineTo(cx+26*s+rage,cy-30*s);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle=ccol2;
+    ctx.beginPath();
+    ctx.moveTo(cx+rage,cy-80*s);
+    ctx.lineTo(cx-18*s+rage,cy-58*s);
+    ctx.lineTo(cx+18*s+rage,cy-58*s);
+    ctx.closePath(); ctx.fill();
+    // vines hanging
+    for(let i=0;i<4;i++){
+      const vx=cx+(i-1.5)*8*s+rage;
+      ctx.strokeStyle='#184010'; ctx.lineWidth=2*s;
+      ctx.beginPath();
+      ctx.moveTo(vx,cy-30*s);
+      ctx.quadraticCurveTo(vx+Math.sin(t+i)*6*s,cy-15*s,vx+Math.sin(t+i+1)*4*s,cy-5*s);
+      ctx.stroke();
+    }
+    // FACE — terrifying
+    const faceCol=phase>=3?'#ff2000':'#ff6020';
+    const faceGlow=phase>=3?'#ff8000':'#ffaa40';
+    ctx.fillStyle=faceCol;
+    ctx.beginPath(); ctx.arc(cx-8*s+rage,cy-38*s,6*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+8*s+rage,cy-38*s,6*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=faceGlow;
+    ctx.beginPath(); ctx.arc(cx-8*s+rage,cy-38*s,3.5*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+8*s+rage,cy-38*s,3.5*s,0,Math.PI*2); ctx.fill();
+    // mouth - snarling
+    ctx.fillStyle='#1a0000';
+    ctx.beginPath();
+    ctx.moveTo(cx-9*s+rage,cy-30*s); ctx.lineTo(cx-9*s+rage,cy-24*s);
+    ctx.lineTo(cx+9*s+rage,cy-24*s); ctx.lineTo(cx+9*s+rage,cy-30*s);
+    ctx.closePath(); ctx.fill();
+    // teeth
+    ctx.fillStyle='#f0f0d0';
+    for(let i=0;i<5;i++) ctx.fillRect(cx-7*s+i*3.5*s+rage,cy-30*s,2.5*s,4*s);
+    // phase text
+    if(phase>=2){
+      ctx.fillStyle=phase>=3?'#ff4020':'#ff8030';
+      ctx.font=`bold ${8*s}px monospace`;
+      ctx.textAlign='center';
+      ctx.fillText(phase>=3?'BERSERK':'ENRAGED',cx+rage,cy-88*s);
+    }
+  },
+
+  // ── SPROUT MERCHANT ───────────────────────────────────────
+  sproutMerchant(ctx, cx, cy, s=1) {
+    const bob=Math.sin(Date.now()*0.003)*2*s;
+    ctx.fillStyle='rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+8*s,6*s,2*s,0,0,Math.PI*2); ctx.fill();
+    // small leaf base
+    ctx.fillStyle='#2a6018';
+    ctx.fillRect(cx-2*s,cy+2*s+bob,4*s,6*s);
+    // body - round happy sprout
+    ctx.fillStyle='#3a9020';
+    ctx.beginPath(); ctx.arc(cx,cy-2*s+bob,8*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#50b030';
+    ctx.beginPath(); ctx.arc(cx-2*s,cy-4*s+bob,5*s,0,Math.PI*2); ctx.fill();
+    // top leaf
+    ctx.fillStyle='#3a9020';
+    ctx.save(); ctx.translate(cx,cy-10*s+bob); ctx.rotate(-0.2);
+    ctx.fillRect(-2*s,-8*s,4*s,9*s); ctx.restore();
+    // eyes - friendly
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(cx-3*s,cy-3*s+bob,2.5*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+3*s,cy-3*s+bob,2.5*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#1a3010';
+    ctx.beginPath(); ctx.arc(cx-3*s,cy-3*s+bob,1.5*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+3*s,cy-3*s+bob,1.5*s,0,Math.PI*2); ctx.fill();
+    // smile
+    ctx.fillStyle='#1a4010';
+    ctx.beginPath(); ctx.arc(cx,cy+bob,3*s,0.1,Math.PI-0.1); ctx.fill();
+    // shop sign (tiny)
+    ctx.strokeStyle='#7a5020'; ctx.lineWidth=s;
+    ctx.beginPath(); ctx.moveTo(cx+8*s,cy-8*s+bob); ctx.lineTo(cx+16*s,cy-12*s+bob); ctx.stroke();
+    ctx.fillStyle='#c8a040';
+    ctx.fillRect(cx+16*s,cy-18*s+bob,14*s,8*s);
+    ctx.fillStyle='#3a2010';
+    ctx.font=`${5*s}px monospace`; ctx.textAlign='left';
+    ctx.fillText('SHOP',cx+17*s,cy-13*s+bob);
+  },
+
+  // ── GRANDMA'S BUSH (overworld, pre-takeover) ──────────────
+  innocentBush(ctx, cx, cy, s=1) {
+    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+10*s,12*s,3*s,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#3a7020';
+    ctx.beginPath(); ctx.ellipse(cx,cy,14*s,12*s,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#4a8828';
+    ctx.beginPath(); ctx.ellipse(cx-4*s,cy-3*s,9*s,8*s,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#3a7020';
+    ctx.beginPath(); ctx.ellipse(cx+5*s,cy-1*s,7*s,6*s,0,0,Math.PI*2); ctx.fill();
+  },
+
+  // ── THE BUSH WITH EYES (pre-battle in cutscene) ───────────
+  evilBush(ctx, cx, cy, s=1, intensity=1) {
+    const shk=Math.sin(Date.now()*0.005*intensity)*3*s*intensity;
+    SPR.innocentBush(ctx,cx+shk,cy,s);
+    // eyes appear
+    const ey=intensity*1.0;
+    ctx.fillStyle=`rgba(200,30,10,${ey})`;
+    ctx.beginPath(); ctx.arc(cx+shk-5*s,cy-2*s,3*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+shk+5*s,cy-2*s,3*s,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=`rgba(255,100,50,${ey})`;
+    ctx.beginPath(); ctx.arc(cx+shk-5*s,cy-2*s,1.5*s,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+shk+5*s,cy-2*s,1.5*s,0,Math.PI*2); ctx.fill();
+  },
+};
+
+// ── SPRITE MAP FOR ENEMIES ────────────────────────────────────
+const ENEMY_SPRITES = {
+  'Grumpy Fern':      (c,x,y,s)=>SPR.grumpyFern(c,x,y,s),
+  'Angry Daisy':      (c,x,y,s)=>SPR.angryDaisy(c,x,y,s),
+  'Root Creep':       (c,x,y,s)=>SPR.rootCreep(c,x,y,s),
+  'Thorned Brier':    (c,x,y,s)=>SPR.thornedBrier(c,x,y,s),
+  'Vined Watcher':    (c,x,y,s)=>SPR.vinedWatcher(c,x,y,s),
+  'Bark Beetle King': (c,x,y,s)=>SPR.thornedBrier(c,x,y,s), // reuse
+  'Pine Ghoul':       (c,x,y,s)=>SPR.pineGhoul(c,x,y,s),
+  'Acorn Golem':      (c,x,y,s)=>SPR.acornGolem(c,x,y,s),
+  'Canopy Shade':     (c,x,y,s)=>SPR.canopyShade(c,x,y,s),
+  'The Splintered Sentry':(c,x,y,s)=>SPR.splinteredSentry(c,x,y,s),
+  'The Sprout Scout': (c,x,y,s,st)=>SPR.sproutScout(c,x,y,s,st),
+  'The Mighty Tree':  (c,x,y,s)=>SPR.mightyTree(c,x,y,s),
+  'THE GREAT WARRIOR':(c,x,y,s,ph)=>SPR.greatWarrior(c,x,y,s,ph),
+};
+
+// ── TILE CONSTANTS ────────────────────────────────────────────
+const T={GRASS:0,TREE:1,PATH:2,FLOWER:3,CAMP:5,STAIRS_DOWN:6,STAIRS_UP:7};
+
+// ── ZONE PALETTES ─────────────────────────────────────────────
+const ZP=[
+  {grass:'#3a5a20',grass2:'#2e4a16',path:'#8a7050',tree:'#1a3008',tree2:'#2a4a12',flower:'#e87040',sky:'#1a2e0a'},
+  {grass:'#2a4a10',grass2:'#22380c',path:'#6a5838',tree:'#14280a',tree2:'#1e3610',flower:'#c03060',sky:'#0e1a06'},
+  {grass:'#1c3208',grass2:'#162806',path:'#584838',tree:'#0e1e06',tree2:'#162a08',flower:'#902050',sky:'#08100a'},
+  {grass:'#12200a',grass2:'#0e1a08',path:'#483826',tree:'#080e04',tree2:'#0e1606',flower:'#602040',sky:'#060a08'},
+  {grass:'#0a1406',grass2:'#080e04',path:'#382818',tree:'#040802',tree2:'#080e04',flower:'#8b0000',sky:'#020402'},
+];
+
+// ── MAP GENERATION ────────────────────────────────────────────
+function makeMap(zone) {
+  let seed=zone*77777+13;
+  const rng=()=>{seed=(seed*1664525+1013904223)&0xffffffff;return(seed>>>0)/0xffffffff;};
+  const tiles=[];
+  for(let r=0;r<ROWS;r++){tiles.push([]);for(let c=0;c<COLS;c++){
+    const v=rng();
+    if(r<2||r>=ROWS-2||c<2||c>=COLS-2) tiles[r].push(T.TREE);
+    else if(v<0.20) tiles[r].push(T.TREE);
+    else if(v<0.25) tiles[r].push(T.FLOWER);
+    else tiles[r].push(T.GRASS);
+  }}
+  // carve winding path
+  let pc=Math.floor(COLS/2), pr=ROWS-4;
+  const pathW=3;
+  while(pr>4){
+    for(let w=-Math.floor(pathW/2);w<=Math.floor(pathW/2);w++)
+      if(pc+w>1&&pc+w<COLS-2) tiles[pr][pc+w]=T.PATH;
+    const d=rng();
+    if(d<0.55) pr--;
+    else if(d<0.75) pc=Math.max(4,Math.min(COLS-5,pc-1));
+    else pc=Math.max(4,Math.min(COLS-5,pc+1));
+  }
+  for(let w=-1;w<=1;w++) if(pc+w>1&&pc+w<COLS-2) tiles[4][pc+w]=T.PATH;
+  // stairs
+  tiles[ROWS-3][Math.floor(COLS/2)]=T.STAIRS_DOWN;
+  tiles[4][pc]=T.STAIRS_UP;
+  // camps
+  let cp=0;
+  for(let tries=0;tries<300&&cp<(zone===0?1:3);tries++){
+    const cr=8+Math.floor(rng()*(ROWS-16));
+    const cc=5+Math.floor(rng()*(COLS-10));
+    if(tiles[cr][cc]===T.PATH||tiles[cr][cc]===T.GRASS){tiles[cr][cc]=T.CAMP;cp++;}
+  }
+  return{tiles,upR:4,upC:pc};
+}
+
+// ── GAME DATA ─────────────────────────────────────────────────
+const ZONE_NAMES=['Grandma\'s Backyard','Zone I — The Fallen Garden','Zone II — The Thorn Thicket','Zone III — The Pinecone Canopy','Zone IV — The Warrior\'s Crown'];
+
+const WEAPONS=[
+  {name:'Stick',    atk:3, sp:'Poke',          spAtk:5,  spCost:0},
+  {name:'Big Stick',atk:6, sp:'Bonk',          spAtk:10, spCost:2},
+  {name:'Garden Fork',atk:10,sp:'Stab Spam',   spAtk:16, spCost:3},
+  {name:'Rake Spear',atk:15,sp:'Raking Strike',spAtk:24, spCost:4},
+  {name:'Watering Lance',atk:20,sp:'Soaking Blast',spAtk:33,spCost:5},
+];
+const ITEMS={
+  'Granola Bar':{desc:'Restore 8 HP',heal:8,cost:3},
+  'Juice Box':{desc:'Restore 18 HP',heal:18,cost:6},
+  'Worm Juice':{desc:'Restore 35 HP',heal:35,cost:12},
+  'Sap Vial':{desc:'+2 ATK this hit',heal:0,atk:2,cost:8},
+  'Sunscreen SPF100':{desc:'Next enemy hit halved',heal:0,def:1,cost:10},
+};
+const ZONE_ENEMIES=[
+  [],
+  [{name:'Grumpy Fern',hp:14,atk:3,reward:{seeds:2},moves:['slap','slap','tangle']},
+   {name:'Angry Daisy',hp:12,atk:4,reward:{seeds:2},moves:['bite','pollen','pollen']},
+   {name:'Root Creep', hp:18,atk:3,reward:{seeds:3},moves:['trip','trip','squeeze']}],
+  [{name:'Thorned Brier',hp:26,atk:6,reward:{seeds:4},moves:['poke','slash','poke']},
+   {name:'Vined Watcher',hp:24,atk:5,reward:{seeds:4},moves:['grab','grab','wring']},
+   {name:'Bark Beetle King',hp:22,atk:7,reward:{seeds:5},moves:['gnaw','dive','gnaw']}],
+  [{name:'Pine Ghoul',  hp:40,atk:8, reward:{seeds:6},moves:['cone','cone','slam']},
+   {name:'Acorn Golem', hp:46,atk:7, reward:{seeds:6},moves:['roll','hurl','roll']},
+   {name:'Canopy Shade',hp:36,atk:10,reward:{seeds:7},moves:['darken','darken','choke']}],
+  [],
+];
+const BOSSES=[
+  null,
+  {name:'The Splintered Sentry',hp:60,maxHp:60,atk:9,moves:['splinter','splinter','rose-grab','splinter','thorn-wall'],reward:{seeds:18},isBoss:true,bossZone:1},
+  {name:'The Sprout Scout',hp:90,maxHp:90,atk:11,moves:['dig','dig','bugle-call','shovel-smash','dig'],reward:{seeds:24},isBoss:true,bossZone:2},
+  {name:'The Mighty Tree',hp:130,maxHp:130,atk:13,moves:['cone-drop','cone-drop','cone-drop','root-quake','cone-drop'],reward:{seeds:35},isBoss:true,bossZone:3},
+  {name:'THE GREAT WARRIOR',hp:220,maxHp:220,atk:18,moves:['vortex','vine-whip','vine-whip','ancient-crush','vine-whip','sap-storm'],reward:{seeds:999},isBoss:true,bossZone:4,phase2:{atk:23},phase3:{atk:30}},
+];
+const SHOP_STOCK=[
+  [],
+  [{id:'Big Stick',type:'weapon',idx:1,cost:8},{id:'Granola Bar',type:'item',cost:3},{id:'Sap Vial',type:'item',cost:8}],
+  [{id:'Garden Fork',type:'weapon',idx:2,cost:15},{id:'Juice Box',type:'item',cost:6},{id:'Sunscreen SPF100',type:'item',cost:10}],
+  [{id:'Rake Spear',type:'weapon',idx:3,cost:25},{id:'Worm Juice',type:'item',cost:12},{id:'Juice Box',type:'item',cost:6}],
+  [{id:'Watering Lance',type:'weapon',idx:4,cost:40},{id:'Worm Juice',type:'item',cost:12},{id:'Sunscreen SPF100',type:'item',cost:10}],
+];
+
+// ── GAME STATE ────────────────────────────────────────────────
+let G={};
+function initGame(){
+  G={zone:0,px:Math.floor(COLS/2),py:ROWS-4,hp:30,maxHp:30,seeds:0,
+     weaponIdx:0,inventory:{},bossDefeated:[false,false,false,false,false],
+     zones:[],encStep:12,inCombat:false,combatEnemy:null,
+     scoutTurns:0,gwPhase:1,tempAtk:0,tempDef:0,
+     sentryConsec:0,combatStep:0,facing:1,walkStep:0};
+  for(let z=0;z<5;z++) G.zones.push(makeMap(z));
+}
+const wep=()=>WEAPONS[G.weaponIdx];
+
+// ── CUTSCENE / STORY ENGINE ────────────────────────────────────
+let storyQ=[],storyCB=null,sceneTimer=0,scenePlaying=false;
+
+const SCENES={
+  // Animated intro cutscene: draws to #sceneCanvas
+  intro_0:{
+    title:'A SUMMER AFTERNOON',
+    text:'You are a kid. You have a stick. You are in Grandma\'s backyard.',
+    sub:'The best possible situation.',
+    draw(t,ctx,w,h){
+      // sky gradient
+      const sky=ctx.createLinearGradient(0,0,0,h);
+      sky.addColorStop(0,'#87ceeb'); sky.addColorStop(1,'#c8e8b0');
+      ctx.fillStyle=sky; ctx.fillRect(0,0,w,h);
+      // sun
+      ctx.fillStyle='#fff0a0';
+      ctx.beginPath(); ctx.arc(w*0.8,50,22,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,240,100,0.3)';
+      ctx.beginPath(); ctx.arc(w*0.8,50,34,0,Math.PI*2); ctx.fill();
+      // ground
+      ctx.fillStyle='#5a8a30'; ctx.fillRect(0,h*0.65,w,h);
+      ctx.fillStyle='#4a7828'; ctx.fillRect(0,h*0.65,w,12);
+      // fence
+      ctx.fillStyle='#d0c090';
+      for(let i=0;i<w;i+=22){ctx.fillRect(i+2,h*0.5,16,h*0.18);ctx.fillRect(i,h*0.52,22,6);ctx.fillRect(i,h*0.6,22,6);}
+      // grandma's flowers
+      for(let i=0;i<5;i++){
+        const fx=60+i*40,fy=h*0.65-8;
+        ctx.fillStyle='#3a7020'; ctx.fillRect(fx-1,fy-18,2,18);
+        ctx.fillStyle=['#e87040','#f0d040','#d040a0','#40a0e0','#e040e0'][i];
+        ctx.beginPath(); ctx.arc(fx,fy-20,6,0,Math.PI*2); ctx.fill();
+      }
+      // bush (innocent)
+      SPR.innocentBush(ctx,w*0.75,h*0.65-12,1.8);
+      // KID walking in from left
+      const kidX=Math.min(w*0.3, 40+t*80);
+      SPR.kidBig(ctx,kidX,h*0.65-4,2,1,t*4);
+    }
+  },
+  intro_1:{
+    title:'THE BUSH',
+    text:'Grandma has a lot of plants. But one of them — a big, round bush in the corner — is looking at you.',
+    sub:'Like, ACTUALLY looking at you.',
+    draw(t,ctx,w,h){
+      const sky=ctx.createLinearGradient(0,0,0,h);
+      sky.addColorStop(0,'#87ceeb'); sky.addColorStop(1,'#c8e8b0');
+      ctx.fillStyle=sky; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#5a8a30'; ctx.fillRect(0,h*0.65,w,h);
+      ctx.fillStyle='#4a7828'; ctx.fillRect(0,h*0.65,w,12);
+      // kid facing bush
+      SPR.kidBig(ctx,w*0.28,h*0.65-4,2,1,0);
+      // bush with eyes appearing
+      SPR.evilBush(ctx,w*0.72,h*0.65-12,1.8,Math.min(1,t*0.8));
+      // question marks above kid's head
+      if(t>0.5){
+        ctx.fillStyle='#1a1a1a';
+        ctx.font='bold 18px monospace'; ctx.textAlign='center';
+        ctx.fillText('?',w*0.3,h*0.38-Math.sin(t*3)*4);
+        ctx.fillText('??',w*0.25,h*0.3-Math.cos(t*2.5)*5);
+      }
+    }
+  },
+  intro_2:{
+    title:'I HAVE BEEN WATCHING YOU',
+    text:'"FOR EIGHTY YEARS I HAVE WATCHED THIS YARD. AND NOW I SHALL CLAIM IT."',
+    sub:'',
+    draw(t,ctx,w,h){
+      // darkening sky
+      const dark=Math.min(0.7,t*0.5);
+      const sky=ctx.createLinearGradient(0,0,0,h);
+      sky.addColorStop(0,`rgb(${Math.floor(135*(1-dark))},${Math.floor(206*(1-dark))},${Math.floor(235*(1-dark))})`);
+      sky.addColorStop(1,`rgb(${Math.floor(80*(1-dark))},${Math.floor(120*(1-dark))},${Math.floor(60*(1-dark))})`);
+      ctx.fillStyle=sky; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle=`rgb(${Math.floor(90*(1-dark))},${Math.floor(138*(1-dark))},${Math.floor(48*(1-dark))})`;
+      ctx.fillRect(0,h*0.65,w,h);
+      // bush shaking intensely
+      SPR.evilBush(ctx,w*0.65,h*0.55,2.4,1);
+      // kid backing away
+      const kidX=w*0.25-t*30;
+      SPR.kidBig(ctx,kidX,h*0.65-4,2,-1,t*3);
+      // speech bubble
+      if(t>0.2){
+        ctx.fillStyle='rgba(240,230,200,0.92)';
+        ctx.beginPath(); ctx.roundRect(w*0.3,h*0.08,w*0.62,60,8); ctx.fill();
+        ctx.fillStyle='rgba(240,230,200,0.92)';
+        ctx.beginPath(); ctx.moveTo(w*0.68,h*0.08+60); ctx.lineTo(w*0.72,h*0.08+80); ctx.lineTo(w*0.74,h*0.08+60); ctx.fill();
+        ctx.fillStyle='#1a0a00'; ctx.font='bold 10px monospace'; ctx.textAlign='center';
+        const chars=Math.floor(t*140);
+        const txt='"I HAVE BEEN WATCHING YOU..."';
+        ctx.fillText(txt.substring(0,chars),w*0.61,h*0.08+24);
+        ctx.font='9px monospace';
+        const t2='"FOR EIGHTY YEARS."';
+        if(chars>txt.length) ctx.fillText(t2.substring(0,chars-txt.length),w*0.61,h*0.08+42);
+      }
+    }
+  },
+  intro_3:{
+    title:'THE GREAT WARRIOR',
+    text:'The bush ERUPTS. Roots tear through the lawn. The backyard grows into a massive impossible forest in seconds.',
+    sub:'',
+    draw(t,ctx,w,h){
+      const eruption=Math.min(1,t*1.2);
+      // sky turning dark fast
+      ctx.fillStyle=`rgb(${Math.floor(20+eruption*10)},${Math.floor(30+eruption*5)},${Math.floor(10)})`;
+      ctx.fillRect(0,0,w,h);
+      // ground cracking
+      ctx.fillStyle=`rgb(${Math.floor(40+eruption*10)},${Math.floor(70+eruption*10)},${Math.floor(20)})`;
+      ctx.fillRect(0,h*0.6,w,h);
+      // roots shooting out
+      for(let i=0;i<8;i++){
+        const a=(i/8)*Math.PI+Math.PI*0.1;
+        ctx.strokeStyle='#3a2010'; ctx.lineWidth=4;
+        ctx.beginPath(); ctx.moveTo(w*0.65,h*0.55);
+        ctx.lineTo(w*0.65+Math.cos(a)*eruption*w*0.7,h*0.55+Math.sin(a)*eruption*h*0.6);
+        ctx.stroke();
+      }
+      // growing warrior silhouette
+      if(eruption>0.3){
+        const gs=(eruption-0.3)/0.7;
+        SPR.greatWarrior(ctx,w*0.65,h*0.55,gs*2.2,1);
+      }
+      // cracks in ground
+      ctx.strokeStyle='#1a0800'; ctx.lineWidth=3;
+      for(let i=0;i<5;i++){
+        ctx.beginPath();
+        ctx.moveTo(w*0.65,h*0.65);
+        ctx.lineTo(w*0.65+(i-2)*eruption*50,h*0.65+eruption*40+i*8);
+        ctx.stroke();
+      }
+      // screen shake effect
+      if(eruption>0.5){
+        const shk=(eruption-0.5)*8;
+        ctx.fillStyle=`rgba(255,100,20,${(eruption-0.5)*0.3})`;
+        ctx.fillRect(0,0,w,h);
+      }
+    }
+  },
+  intro_4:{
+    title:'UH OH',
+    text:'The roots knock you off your feet. You tumble to the very BOTTOM of the Great Warrior\'s new domain.',
+    sub:'Way up above, you can hear it laughing.',
+    draw(t,ctx,w,h){
+      // dark forest
+      ctx.fillStyle='#060c03'; ctx.fillRect(0,0,w,h);
+      // trees looming
+      for(let i=0;i<6;i++){
+        const tx=40+i*90;
+        ctx.fillStyle='#0a1806';
+        ctx.beginPath();
+        ctx.moveTo(tx,20); ctx.lineTo(tx-30,h); ctx.lineTo(tx+30,h);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle='#060e04';
+        ctx.fillRect(tx-6,h*0.5,12,h*0.5);
+      }
+      // ground
+      ctx.fillStyle='#0e1608'; ctx.fillRect(0,h*0.85,w,h);
+      // KID falling and landing
+      const fallDone=t>0.6;
+      if(!fallDone){
+        const fy=h*0.1+t*h*0.75/0.6;
+        const rot=t*Math.PI*3;
+        ctx.save(); ctx.translate(w*0.5,fy); ctx.rotate(rot);
+        SPR.kidBig(ctx,0,0,2,1,0); ctx.restore();
+      } else {
+        // landed, dazed, sitting up
+        SPR.kidBig(ctx,w*0.5,h*0.85-10,2,1,0);
+        // daze stars
+        for(let i=0;i<3;i++){
+          const a=((t-0.6)*4+i/3)*Math.PI*2;
+          ctx.fillStyle='#ffee60';
+          ctx.font='16px serif'; ctx.textAlign='center';
+          ctx.fillText('★',w*0.5+Math.cos(a)*24,h*0.85-44+Math.sin(a)*10);
+        }
+      }
+      // laugh from above
+      if(t>0.7){
+        ctx.fillStyle='rgba(150,255,80,0.7)';
+        ctx.font='bold 14px monospace'; ctx.textAlign='center';
+        ctx.fillText('HEH HEH HEH HEH',w*0.5,40);
+      }
+    }
+  },
+  intro_5:{
+    title:'BUT YOU HAVE A STICK',
+    text:'You get up. A forest that didn\'t exist five minutes ago. A stick. It\'s going to be fine.',
+    sub:'WASD / Arrow Keys to move. Walk into enemies to fight. Enter CAMP tiles to shop.',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#0a1206'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#0e1608'; ctx.fillRect(0,h*0.78,w,h);
+      // forest bg
+      for(let i=0;i<5;i++){
+        ctx.fillStyle=['#081204','#0a1606','#0c1808','#081204','#0a1606'][i];
+        ctx.beginPath();
+        ctx.moveTo(60+i*100,10); ctx.lineTo(10+i*100,h*0.75); ctx.lineTo(110+i*100,h*0.75);
+        ctx.closePath(); ctx.fill();
+      }
+      // kid standing up confidently
+      const bob=Math.sin(t*2)*2;
+      SPR.kidBig(ctx,w*0.5,h*0.78+bob,2,1,0);
+      // stick held up triumphantly
+      ctx.strokeStyle='#8a5020'; ctx.lineWidth=4; ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(w*0.5+14,h*0.78-18+bob);
+      ctx.lineTo(w*0.5+30,h*0.78-46+bob-Math.sin(t*3)*5);
+      ctx.stroke();
+      // glint on stick
+      if(Math.sin(t*4)>0.5){
+        ctx.fillStyle='rgba(255,255,200,0.9)';
+        ctx.font='12px serif'; ctx.textAlign='center';
+        ctx.fillText('✦',w*0.5+28,h*0.78-50+bob);
+      }
+    }
+  },
+  // Zone entrance scenes
+  zone1:{title:'ZONE I: THE FALLEN GARDEN',text:'What used to be a flower bed is now a tangled, overgrown mess. The flowers look angry.',sub:'Keep climbing.',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#0e1a06'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#1a2a0a'; ctx.fillRect(0,h*0.7,w,h);
+      // dead flowers scattered
+      for(let i=0;i<6;i++){
+        const fx=30+i*86,fy=h*0.7-10;
+        ctx.fillStyle='#2a4010'; ctx.fillRect(fx,fy-20,2,20);
+        ctx.fillStyle=i%2===0?'#802040':'#601030';
+        ctx.beginPath(); ctx.arc(fx+1,fy-22,6,0,Math.PI*2); ctx.fill();
+      }
+      SPR.kidBig(ctx,w*0.4,h*0.7-4,1.6,1,t*3);
+      SPR.grumpyFern(ctx,w*0.75,h*0.7-8,1.4);
+    }
+  },
+  sentry:{title:'THE SPLINTERED SENTRY',text:'A massive quivering wall of thorns and roses seals off the path. "YOU SHALL NOT PASS. (I\'m quite sore, actually.)"',sub:'',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#0a1206'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#0e1808'; ctx.fillRect(0,h*0.7,w,h);
+      SPR.splinteredSentry(ctx,w*0.7,h*0.68,2.0);
+      SPR.kidBig(ctx,w*0.22,h*0.7-4,1.6,-1,0);
+    }
+  },
+  zone2:{title:'ZONE II: THE THORN THICKET',text:'Everything here is sharp. The ground is sharp. The air feels sharp. Even the silence is somehow spiky.',sub:'',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#080e04'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#0c1406'; ctx.fillRect(0,h*0.7,w,h);
+      for(let i=0;i<8;i++){
+        ctx.fillStyle='#ddd'; const tx=20+i*70, ty=h*0.7-Math.random()*30;
+        ctx.fillRect(tx,ty-15,2,15);
+        ctx.fillRect(tx-4,ty-8,10,2);
+      }
+      SPR.kidBig(ctx,w*0.35,h*0.7-4,1.6,1,t*2);
+      SPR.thornedBrier(ctx,w*0.72,h*0.7-10,1.5);
+    }
+  },
+  scout:{title:'THE SPROUT SCOUT',text:'"HALT! Private Sprout reporting for duty! This sector is under control of the Great Warrior! I have a shovel and I am NOT afraid to use it!"',sub:'He salutes. He is extremely serious about this.',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#08100a'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#0c1408'; ctx.fillRect(0,h*0.7,w,h);
+      SPR.sproutScout(ctx,w*0.7,h*0.68,1.9,t*4);
+      SPR.kidBig(ctx,w*0.25,h*0.7-4,1.6,-1,0);
+      // salute effect
+      if(t>0.3){
+        ctx.fillStyle='rgba(200,220,180,0.8)';
+        ctx.font='12px monospace'; ctx.textAlign='center';
+        ctx.fillText('*SALUTES*',w*0.7,h*0.68-70);
+      }
+    }
+  },
+  zone3:{title:'ZONE III: THE PINECONE CANOPY',text:'You look up. Nothing but branches. Then a pinecone hits you squarely on the head.',sub:'"HEH HEH HEH." — distant evil laughter from above',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#060a04'; ctx.fillRect(0,0,w,h);
+      // dense canopy
+      for(let i=0;i<8;i++){
+        ctx.fillStyle='#080e04';
+        ctx.beginPath();
+        ctx.moveTo(40+i*70,0); ctx.lineTo(40+i*70-40,h*0.45); ctx.lineTo(40+i*70+40,h*0.45);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.fillStyle='#0a1006'; ctx.fillRect(0,h*0.7,w,h);
+      SPR.kidBig(ctx,w*0.45,h*0.7-4,1.6,1,0);
+      // falling pinecone hitting
+      const py=h*0.1+Math.min(t,0.8)*(h*0.6-h*0.1)/0.8;
+      ctx.fillStyle='#7a4a20';
+      ctx.beginPath(); ctx.ellipse(w*0.45,py,4,5,0,0,Math.PI*2); ctx.fill();
+      if(t>0.75){
+        ctx.fillStyle='#ffee60';
+        ctx.font='18px serif'; ctx.textAlign='center';
+        ctx.fillText('★',w*0.5,h*0.55);
+        ctx.font='11px monospace';
+        ctx.fillStyle='#ff8030'; ctx.fillText('OW',w*0.5,h*0.52);
+      }
+    }
+  },
+  tree:{title:'THE MIGHTY TREE',text:'You cannot see its top. A cascade of pinecones rains down. "YOU CANNOT CLIMB ME, SMALL CHILD."',sub:'',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#050a03'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#070e05'; ctx.fillRect(0,h*0.72,w,h);
+      SPR.mightyTree(ctx,w*0.65,h*0.82,2.2);
+      SPR.kidBig(ctx,w*0.2,h*0.72-4,1.6,1,0);
+      // pinecone falling towards kid
+      const pcy=h*0.1+Math.min(t,0.9)*(h*0.65)/0.9;
+      ctx.fillStyle='#7a4a20';
+      ctx.beginPath(); ctx.ellipse(w*0.22,pcy,4,5,0,0,Math.PI*2); ctx.fill();
+    }
+  },
+  zone4:{title:'ZONE IV: THE WARRIOR\'S CROWN',text:'The very top. The roots of the Great Warrior writhe overhead. The air smells like old wood and something ancient. And angry.',sub:'There is no going back now.',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#030502'; ctx.fillRect(0,0,w,h);
+      // roots overhead
+      ctx.strokeStyle='#1a0a04'; ctx.lineWidth=6;
+      for(let i=0;i<5;i++){
+        ctx.beginPath();
+        ctx.moveTo(i*120,0);
+        ctx.quadraticCurveTo(i*120+60+Math.sin(t+i)*20,80,i*120+80,0);
+        ctx.stroke();
+      }
+      ctx.fillStyle='#050a03'; ctx.fillRect(0,h*0.72,w,h);
+      SPR.kidBig(ctx,w*0.45,h*0.72-4,1.6,1,t*2);
+      // ominous glow from ahead
+      const grd=ctx.createRadialGradient(w,h*0.72,20,w,h*0.72,200);
+      grd.addColorStop(0,'rgba(180,30,20,0.5)'); grd.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=grd; ctx.fillRect(0,0,w,h);
+    }
+  },
+  warrior:{title:'THE GREAT WARRIOR',text:'"YOU HAVE CLIMBED FAR, SMALL THING. But I am EIGHTY YEARS OLD. I have watched children COME and GO. And you are EXACTLY WHY I EXPANDED."',sub:'',
+    draw(t,ctx,w,h){
+      ctx.fillStyle='#020302'; ctx.fillRect(0,0,w,h);
+      ctx.fillStyle='#040604'; ctx.fillRect(0,h*0.72,w,h);
+      const gs=Math.min(1.8,0.5+t*1.5);
+      SPR.greatWarrior(ctx,w*0.68,h*0.65,gs,1);
+      SPR.kidBig(ctx,w*0.18,h*0.72-4,1.6,-1,0);
+      if(t>0.5){
+        ctx.fillStyle='rgba(220,200,100,0.9)';
+        ctx.font='bold 10px monospace'; ctx.textAlign='center';
+        const txt='"EVERYTHING IS MINE."';
+        ctx.fillText(txt.substring(0,Math.floor((t-0.5)*80)),w*0.6,h*0.2);
+      }
+    }
+  },
+};
+
+let _stSceneKey=null, _stSceneStart=0;
+const SCENE_DURATION=4.5; // seconds per scene
+
+function runStory(seqKeys, cb){
+  storyQ=[...seqKeys];
+  storyCB=cb;
+  advanceStory();
+}
+
+function advanceStory(){
+  if(!storyQ.length){
+    hide('story');
+    if(storyCB){const c=storyCB;storyCB=null;c();}
+    return;
+  }
+  const key=storyQ.shift();
+  const scene=SCENES[key];
+  if(!scene) return advanceStory();
+  _stSceneKey=key;
+  _stSceneStart=performance.now();
+  document.getElementById('story-title').textContent=scene.title;
+  document.getElementById('story-text').textContent=scene.text;
+  document.getElementById('story-sub').textContent=scene.sub||'';
+  show('story');
+  drawScene(0);
+}
+
+function drawScene(t){
+  const scene=SCENES[_stSceneKey];
+  if(!scene) return;
+  sx.clearRect(0,0,560,240);
+  scene.draw(t,sx,560,240);
+}
+
+function storyNext(){advanceStory();}
+
+// auto-animate story scenes
+function tickStory(){
+  if(!visible('story')||!_stSceneKey) return;
+  const t=(performance.now()-_stSceneStart)/1000/SCENE_DURATION;
+  drawScene(Math.min(t,1));
+}
+
+// ── CAMERA ────────────────────────────────────────────────────
+// World is COLS*TW × ROWS*TW pixels. Canvas is 600×540.
+// Camera centres on the player, clamped to world bounds.
+function getCam(){
+  const cx=G.px*TW+TW/2-W/2;
+  const cy=G.py*TW+TW/2-H/2;
+  return{
+    x:Math.max(0,Math.min(COLS*TW-W,cx)),
+    y:Math.max(0,Math.min(ROWS*TW-H,cy))
+  };
+}
+
+// ── RENDERING ─────────────────────────────────────────────────
+function drawTile(ctx, tile, wx, wy, pal, t, r, c){
+  const x=wx, y=wy;
+  switch(tile){
+    case T.GRASS:{
+      ctx.fillStyle=((r+c)%2===0)?pal.grass:pal.grass2;
+      ctx.fillRect(x,y,TW,TW);
+      // grass tufts
+      if((r*7+c*13)%9===0){
+        ctx.fillStyle=pal.tree2;
+        ctx.fillRect(x+6,y+22,2,8); ctx.fillRect(x+12,y+18,2,12);
+        ctx.fillRect(x+20,y+24,2,6);
+      }
+      break;
+    }
+    case T.TREE:{
+      ctx.fillStyle=pal.tree;
+      ctx.fillRect(x,y,TW,TW);
+      // trunk hint
+      ctx.fillStyle=pal.tree2;
+      ctx.fillRect(x+12,y+14,8,TW-14);
+      // crown
+      ctx.fillStyle=pal.tree;
+      ctx.fillRect(x+4,y+2,24,18);
+      ctx.fillRect(x+2,y+8,28,12);
+      // highlight
+      ctx.fillStyle=pal.grass2;
+      ctx.fillRect(x+6,y+4,6,4);
+      break;
+    }
+    case T.PATH:{
+      ctx.fillStyle=pal.path;
+      ctx.fillRect(x,y,TW,TW);
+      ctx.fillStyle='rgba(0,0,0,0.12)';
+      ctx.fillRect(x+2,y+2,12,10); ctx.fillRect(x+16,y+16,12,10);
+      ctx.fillRect(x+2,y+18,10,8);
+      break;
+    }
+    case T.FLOWER:{
+      ctx.fillStyle=pal.grass;
+      ctx.fillRect(x,y,TW,TW);
+      // stem
+      ctx.fillStyle=pal.tree2; ctx.fillRect(x+14,y+14,3,14);
+      // petals
+      ctx.fillStyle=pal.flower;
+      ctx.fillRect(x+10,y+8,11,6); ctx.fillRect(x+10,y+16,11,6);
+      ctx.fillRect(x+7,y+11,6,8); ctx.fillRect(x+18,y+11,6,8);
+      ctx.fillStyle='#f0d050';
+      ctx.beginPath(); ctx.arc(x+15,y+14,3,0,Math.PI*2); ctx.fill();
+      break;
+    }
+    case T.CAMP:{
+      ctx.fillStyle=pal.grass; ctx.fillRect(x,y,TW,TW);
+      const g=Math.sin(t*0.003)*0.35+0.65;
+      // campfire area
+      ctx.fillStyle=`rgba(60,180,50,${g*0.4})`;
+      ctx.beginPath(); ctx.arc(x+TW/2,y+TW/2,13,0,Math.PI*2); ctx.fill();
+      // sprout merchant
+      SPR.sproutMerchant(ctx,x+TW/2,y+TW/2+6,0.9);
+      break;
+    }
+    case T.STAIRS_UP:{
+      ctx.fillStyle=pal.path; ctx.fillRect(x,y,TW,TW);
+      // glowing upward portal
+      const gp=Math.sin(t*0.004)*0.4+0.6;
+      ctx.fillStyle=`rgba(200,220,80,${gp*0.5})`;
+      ctx.fillRect(x+4,y+4,TW-8,TW-8);
+      ctx.fillStyle='rgba(255,255,100,0.8)';
+      // up arrow
+      ctx.fillRect(x+14,y+8,4,14); ctx.fillRect(x+8,y+14,16,4);
+      ctx.fillRect(x+10,y+8,4,6); ctx.fillRect(x+18,y+8,4,6);
+      // BOSS indicator if not defeated
+      if(G.zone>0&&!G.bossDefeated[G.zone]){
+        ctx.fillStyle=`rgba(220,30,30,${gp})`;
+        ctx.fillRect(x,y,TW,TW);
+        ctx.fillStyle='rgba(255,80,60,0.9)';
+        ctx.fillRect(x+12,y+8,8,14); ctx.fillRect(x+8,y+12,16,6);
+      }
+      break;
+    }
+    case T.STAIRS_DOWN:{
+      ctx.fillStyle=pal.path; ctx.fillRect(x,y,TW,TW);
+      ctx.fillStyle='rgba(60,100,200,0.6)'; ctx.fillRect(x+4,y+4,TW-8,TW-8);
+      ctx.fillStyle='rgba(140,180,255,0.8)';
+      ctx.fillRect(x+14,y+8,4,14); ctx.fillRect(x+8,y+14,16,4);
+      break;
+    }
+  }
+}
+
+function drawMap(){
+  const z=G.zone, pal=ZP[z], tiles=G.zones[z].tiles;
+  const t=Date.now();
+  const cam=getCam();
+  gx.fillStyle=pal.sky; gx.fillRect(0,0,W,H);
+
+  // only draw visible tiles
+  const startC=Math.floor(cam.x/TW);
+  const startR=Math.floor(cam.y/TW);
+  const endC=Math.min(COLS,startC+VIEW_COLS+1);
+  const endR=Math.min(ROWS,startR+VIEW_ROWS+1);
+
+  for(let r=startR;r<endR;r++){
+    for(let c=startC;c<endC;c++){
+      const wx=c*TW-cam.x, wy=r*TW-cam.y;
+      drawTile(gx,tiles[r][c],wx,wy,pal,t,r,c);
+    }
+  }
+
+  // Player sprite (always at screen centre-ish)
+  const ps=W/2-(TW/2), py2=H/2-(TW/2);
+  SPR.kid(gx, ps+TW/2, py2+TW*0.85, 1.5, G.facing, G.walkStep);
+
+  updateHUD();
+}
+
+function updateHUD(){
+  const pct=Math.max(0,G.hp/G.maxHp);
+  document.getElementById('hud-hp-val').textContent=`${G.hp}/${G.maxHp}`;
+  document.getElementById('hud-hp-fill').style.width=(pct*100)+'%';
+  document.getElementById('hud-hp-fill').style.background=pct<0.3?'#e74c3c':'#27ae60';
+  document.getElementById('hud-seeds').textContent=G.seeds;
+  document.getElementById('hud-weapon').textContent=wep().name;
+}
+
+// ── ZONE TRANSITIONS ──────────────────────────────────────────
+function enterZone(z,fromBelow=true){
+  G.zone=z;
+  const zm=G.zones[z];
+  if(fromBelow){G.px=Math.floor(COLS/2);G.py=ROWS-4;}
+  else{G.px=zm.upC;G.py=zm.upR+1;}
+  G.encStep=12+z*2; G.scoutTurns=0; G.sentryConsec=0;
+  const fl=document.getElementById('zone-flash');
+  fl.textContent=ZONE_NAMES[z]; fl.style.display='block';
+  setTimeout(()=>fl.style.display='none',2200);
+  updateHUD(); drawMap();
+}
+
+// ── COMBAT ────────────────────────────────────────────────────
+let combatLog=[], combatAnimStep=0;
+let arenaAnimId=null;
+
+function drawArena(){
+  const e=G.combatEnemy; if(!e) return;
+  ax.fillStyle='#060d04'; ax.fillRect(0,0,560,200);
+  // ground line
+  ax.fillStyle='#0e1a08'; ax.fillRect(0,145,560,55);
+  ax.fillStyle='#0a1206'; ax.fillRect(0,145,560,8);
+  // sky gradient
+  const sky=ax.createLinearGradient(0,0,0,145);
+  sky.addColorStop(0,ZP[G.zone].sky); sky.addColorStop(1,ZP[G.zone].grass);
+  ax.fillStyle=sky; ax.fillRect(0,0,560,145);
+  // background trees
+  for(let i=0;i<5;i++){
+    ax.fillStyle=ZP[G.zone].tree;
+    ax.fillRect(40+i*100,50,20,95);
+    ax.fillRect(20+i*100,30,60,60);
+  }
+
+  // PLAYER
+  const kidX=e.dead?70:100, kidY=148;
+  SPR.kid(ax, kidX, kidY, 2.2, G.facing, combatAnimStep);
+
+  // ENEMY
+  const ex=e.dead?430:390, ey=150;
+  const drawFn=ENEMY_SPRITES[e.name];
+  if(e.dead){
+    ax.save(); ax.globalAlpha=0.3;
+    if(drawFn) drawFn(ax,ex,ey,2.2,G.gwPhase||1);
+    ax.restore();
+  } else {
+    if(drawFn) drawFn(ax,ex,ey,2.2,G.gwPhase||1);
+    else{ // fallback box
+      ax.fillStyle='#2a5010'; ax.fillRect(ex-20,ey-40,40,40);
+      ax.fillStyle='#ee2020'; ax.fillRect(ex-6,ey-32,8,8); ax.fillRect(ex+2,ey-32,8,8);
+    }
+  }
+
+  // VS text
+  ax.fillStyle='rgba(200,180,80,0.6)';
+  ax.font='bold 18px monospace'; ax.textAlign='center';
+  ax.fillText('VS',280,120);
+}
+
+function startArenaAnim(){
+  if(arenaAnimId) cancelAnimationFrame(arenaAnimId);
+  const loop=()=>{
+    if(!visible('combat')) return;
+    combatAnimStep++;
+    drawArena();
+    arenaAnimId=requestAnimationFrame(loop);
+  };
+  arenaAnimId=requestAnimationFrame(loop);
+}
+
+function startCombat(enemy){
+  G.inCombat=true; G.combatEnemy=enemy; G.scoutTurns=0; G.gwPhase=1;
+  document.getElementById('p-name').textContent='Kid';
+  document.getElementById('e-name').textContent=enemy.name;
+  document.getElementById('btn-run').disabled=!!enemy.isBoss;
+  combatLog=[];
+  pushLog(`⚔ ${enemy.name} appears!`,'new');
+  updateBars(); show('combat'); setActs(true);
+  startArenaAnim();
+}
+
+function pushLog(m,c=''){
+  combatLog.unshift({m,c});
+  if(combatLog.length>3) combatLog.pop();
+  ['log-line1','log-line2','log-line3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(combatLog[i]){el.textContent=combatLog[i].m;el.className=combatLog[i].c;}
+    else{el.textContent='';el.className='';}
+  });
+}
+
+function updateBars(){
+  const e=G.combatEnemy;
+  const pp=Math.max(0,G.hp/G.maxHp), ep=e?Math.max(0,e.curHp/e.maxHp):0;
+  const pb=document.getElementById('p-hp-bar');
+  pb.style.width=(pp*100)+'%'; pb.className='bar-fill hp-fill'+(pp<0.3?' low':'');
+  document.getElementById('p-hp-text').textContent=`${G.hp}/${G.maxHp}`;
+  if(e){document.getElementById('e-hp-bar').style.width=(ep*100)+'%';document.getElementById('e-hp-text').textContent=`${e.curHp}/${e.maxHp}`;}
+}
+
+function setActs(v){['btn-attack','btn-special','btn-item','btn-run'].forEach(id=>document.getElementById(id).disabled=!v);}
+
+function combatAction(act){
+  const e=G.combatEnemy; if(!e||!G.inCombat) return;
+  setActs(false);
+  const w=wep();
+  if(act==='attack'){
+    let d=w.atk+Math.floor(Math.random()*4)-1+G.tempAtk; G.tempAtk=0;
+    if(G.combatEnemy.name==='The Splintered Sentry'){G.sentryConsec++;if(G.sentryConsec>=3){pushLog('3 hits! Bonus seeds!','heal');G.seeds+=5;G.sentryConsec=0;}}
+    setTimeout(()=>{
+      e.curHp=Math.max(0,e.curHp-d);
+      pushLog(`You hit with ${w.name} for ${d} dmg!`,'dmg');
+      updateBars(); checkDeath(()=>enemyTurn());
+    },200);
+  } else if(act==='special'){
+    if(w.spCost>0&&G.seeds<w.spCost){pushLog(`Need ${w.spCost} seeds!`,'info');setActs(true);return;}
+    G.seeds-=w.spCost; G.tempAtk=0;
+    let d=w.spAtk+Math.floor(Math.random()*6);
+    setTimeout(()=>{
+      e.curHp=Math.max(0,e.curHp-d);
+      pushLog(`★ ${w.sp}! ${d} damage!`,'new');
+      updateBars(); checkDeath(()=>enemyTurn());
+    },200);
+  } else if(act==='run'){
+    if(e.isBoss){pushLog("Can't flee from bosses!",'info');setActs(true);return;}
+    if(Math.random()<0.5){pushLog('You ran away!','info');endCombat(false);}
+    else{pushLog("Couldn't escape!",'info');enemyTurn();}
+  }
+}
+
+function checkDeath(cb){
+  const e=G.combatEnemy;
+  if(e.curHp<=0){
+    e.dead=true;
+    setTimeout(()=>{
+      pushLog(`${e.name} defeated!`,'heal');
+      G.seeds+=e.reward.seeds;
+      updateHUD();
+      if(e.isBoss){
+        G.bossDefeated[e.bossZone]=true;
+        if(e.bossZone===4){setTimeout(()=>showEnding(),1000);return;}
+        pushLog(`+${e.reward.seeds} seeds!`,'heal');
+        setTimeout(()=>endCombat(true),1400);
+      } else {
+        pushLog(`+${e.reward.seeds} seeds!`,'heal');
+        setTimeout(()=>endCombat(true),1200);
+        // track kills for variety
+        if(e.name==='The Sprout Scout') G.scoutTurns=0;
+      }
+    },500);
+  } else cb();
+}
+
+const MOVE_DESC={
+  slap:d=>`slaps for ${d}`,tangle:d=>`tangles for ${d}`,bite:d=>`bites for ${d}`,pollen:d=>`pollen blast! ${d}`,
+  trip:d=>`trips you for ${d}`,squeeze:d=>`squeezes for ${d}`,poke:d=>`pokes for ${d}`,slash:d=>`slashes for ${d}`,
+  grab:d=>`grabs for ${d}`,wring:d=>`wrings for ${d}`,gnaw:d=>`gnaws for ${d}`,dive:d=>`dives for ${d}`,
+  cone:d=>`pinecone! ${d}`,slam:d=>`slams for ${d}`,roll:d=>`rolling tackle ${d}`,hurl:d=>`hurl attack ${d}`,
+  darken:d=>`blocks light for ${d}`,choke:d=>`chokes for ${d}`,
+  splinter:d=>`splinter spray! ${d}`,'thorn-wall':d=>`thorn wall ${d}`,
+  'rose-grab':d=>`ROSE GRAB! ${d}+${d} (2 turns)`,
+  dig:d=>`shovel to shins! ${d}`,'shovel-smash':d=>`SHOVEL SMASH! ${d}`,
+  'bugle-call':d=>`Bugle call! Summons help...`,
+  'cone-drop':d=>`Pinecone barrage! ${d}x3`,
+  'root-quake':d=>`ROOT QUAKE! ${d}+item drop!`,
+  'vine-whip':d=>`Vine whip! ${d}`,'vortex':d=>`Root vortex! ${d}`,
+  'ancient-crush':d=>`ANCIENT CRUSH! ${d} UNSTOPPABLE`,
+  'sap-storm':d=>`SAP STORM! ${d}`,
+};
+
+function enemyTurn(){
+  const e=G.combatEnemy; if(!e) return;
+  // Phase checks for Great Warrior
+  if(e.name==='THE GREAT WARRIOR'){
+    if(e.curHp/e.maxHp<=0.5&&G.gwPhase===1){
+      G.gwPhase=2; e.atk=e.phase2.atk;
+      pushLog('⚠ ENRAGED! ATK+','dmg');
+      setTimeout(()=>doEnemyAttack(),700); return;
+    }
+    if(e.curHp/e.maxHp<=0.25&&G.gwPhase===2){
+      G.gwPhase=3; e.atk=e.phase3.atk;
+      pushLog('💀 BERSERK!!! Maximum violence!','dmg');
+      setTimeout(()=>doEnemyAttack(),700); return;
+    }
+  }
+  // Scout summons
+  if(e.name==='The Sprout Scout'){
+    G.scoutTurns++;
+    if(G.scoutTurns%4===0){
+      pushLog('Bugle call! +3 damage from Root Creep!','info');
+      applyDmg(3,`Root Creep trips you!`);
+      setTimeout(()=>doEnemyAttack(),900); return;
+    }
+  }
+  doEnemyAttack();
+}
+
+function doEnemyAttack(){
+  const e=G.combatEnemy; if(!e) return;
+  const move=e.moves[Math.floor(Math.random()*e.moves.length)];
+  if(move==='rose-grab'){
+    const d=e.atk+Math.floor(Math.random()*4);
+    applyDmg(d,`${e.name}: ROSE GRAB! ${d} dmg!`);
+    setTimeout(()=>{applyDmg(e.atk,`Still grabbed! ${e.atk} squeeze!`);setTimeout(()=>setActs(true),500);},1000);
+    return;
+  }
+  if(move==='root-quake'){
+    const d=e.atk+6;
+    applyDmg(d,`ROOT QUAKE! ${d} dmg!`);
+    const keys=Object.keys(G.inventory);
+    if(keys.length){const lost=keys[Math.floor(Math.random()*keys.length)];G.inventory[lost]--;if(G.inventory[lost]<=0)delete G.inventory[lost];setTimeout(()=>pushLog(`Dropped a ${lost}!`,'dmg'),500);}
+    setTimeout(()=>setActs(true),700); return;
+  }
+  if(move==='ancient-crush'){
+    const d=e.atk*2;
+    applyDmg(d,`ANCIENT CRUSH! ${d} unstoppable!`);
+    setTimeout(()=>setActs(true),700); return;
+  }
+  if(move==='cone-drop'){
+    let td=0;
+    for(let i=0;i<3;i++) td+=Math.max(1,Math.floor(e.atk*0.4)+Math.floor(Math.random()*3));
+    let def=G.tempDef>0?(G.tempDef--,Math.ceil(td*0.5)):td;
+    applyDmg(def,`Pinecone barrage! ${def} total dmg!`);
+    setTimeout(()=>setActs(true),600); return;
+  }
+  let d=Math.max(1,e.atk+Math.floor(Math.random()*5)-2);
+  if(G.tempDef>0){d=Math.ceil(d*0.5);G.tempDef--;pushLog('Sunscreen blocked half!','heal');}
+  const desc=(MOVE_DESC[move]||((dd)=>`hits for ${dd}`))(d);
+  applyDmg(d,`${e.name}: ${desc}`);
+  setTimeout(()=>setActs(true),600);
+}
+
+function applyDmg(d,msg){
+  G.hp=Math.max(0,G.hp-d);
+  if(msg) pushLog(msg,'dmg');
+  updateBars(); updateHUD();
+  if(G.hp<=0){
+    setTimeout(()=>{
+      G.hp=Math.ceil(G.maxHp*0.3);
+      pushLog('You black out... but get back up. (30% HP)','heal');
+      updateBars(); updateHUD();
+      setTimeout(()=>setActs(true),800);
+    },800);
+  }
+}
+
+function endCombat(won){
+  if(arenaAnimId){cancelAnimationFrame(arenaAnimId);arenaAnimId=null;}
+  G.inCombat=false; G.combatEnemy=null;
+  hide('combat'); drawMap(); updateHUD();
+}
+
+// ── ITEMS ─────────────────────────────────────────────────────
+function openItemPanel(){
+  hide('combat');
+  const list=document.getElementById('item-list'); list.innerHTML='';
+  const keys=Object.keys(G.inventory);
+  if(!keys.length){list.innerHTML='<div style="color:#5a4a2a;font-size:11px;padding:8px;">Bag is empty. Buy items at camps.</div>';}
+  else keys.forEach(name=>{
+    const q=G.inventory[name]; if(q<=0) return;
+    const it=ITEMS[name];
+    const d=document.createElement('div'); d.className='inv-item';
+    // small icon drawn on canvas
+    const ic=document.createElement('canvas'); ic.width=28;ic.height=28;ic.className='inv-icon';
+    const ix=ic.getContext('2d');
+    ix.font='20px serif'; ix.textAlign='center'; ix.fillText(
+      name==='Granola Bar'?'🍪':name==='Juice Box'?'🧃':name==='Worm Juice'?'🪱':name==='Sap Vial'?'✨':'🧴',
+      14,21
+    );
+    d.innerHTML=`<div class="inv-info"><div class="inv-name">${name}</div><div class="inv-desc">${it.desc}</div></div><div class="inv-qty">×${q}</div>`;
+    d.insertBefore(ic,d.firstChild);
+    d.onclick=()=>useItem(name);
+    list.appendChild(d);
+  });
+  show('item-panel');
+}
+
+function closeItemPanel(){hide('item-panel');show('combat');}
+
+function useItem(name){
+  const it=ITEMS[name]; if(!it) return;
+  G.inventory[name]--; if(G.inventory[name]<=0) delete G.inventory[name];
+  if(it.heal>0){G.hp=Math.min(G.maxHp,G.hp+it.heal);pushLog(`Used ${name}! +${it.heal} HP`,'heal');}
+  if(it.atk){G.tempAtk=it.atk;pushLog(`${name}: +${it.atk} ATK this hit!`,'new');}
+  if(it.def){G.tempDef=1;pushLog(`${name}: next hit halved!`,'new');}
+  hide('item-panel'); show('combat'); updateBars(); updateHUD();
+  setTimeout(()=>enemyTurn(),300);
+}
+
+// ── SHOP ──────────────────────────────────────────────────────
+function openShop(zone){
+  document.getElementById('shop-seed-count').textContent=G.seeds;
+  const list=document.getElementById('shop-items'); list.innerHTML='';
+  (SHOP_STOCK[zone]||[]).forEach((item,i)=>{
+    const bought=(item.type==='weapon'&&G.weaponIdx>=item.idx);
+    const div=document.createElement('div'); div.className='shop-item'+(bought?' bought':'');
+    let name='',desc='',cost=item.cost;
+    if(item.type==='weapon'){const w=WEAPONS[item.idx];name=w.name;desc=`ATK ${w.atk} | ${w.sp}`;}
+    else{const it=ITEMS[item.id];name=item.id;desc=it.desc;}
+    // icon canvas
+    const ic=document.createElement('canvas');ic.width=36;ic.height=36;ic.className='shop-icon';
+    const ix=ic.getContext('2d');
+    if(item.type==='weapon'){
+      ix.strokeStyle='#8a5020';ix.lineWidth=3;ix.lineCap='round';
+      ix.beginPath();ix.moveTo(8,28);ix.lineTo(28,8);ix.stroke();
+      ix.fillStyle='#c0a060';ix.fillRect(22,4,8,4);
+    } else {
+      ix.font='22px serif';ix.textAlign='center';
+      ix.fillText(item.id==='Granola Bar'?'🍪':item.id==='Juice Box'?'🧃':item.id==='Worm Juice'?'🪱':item.id==='Sap Vial'?'✨':'🧴',18,24);
+    }
+    div.appendChild(ic);
+    div.innerHTML+=`<div class="shop-info"><div class="shop-name">${name}</div><div class="shop-desc">${desc}</div></div><div class="shop-cost">${cost} 🌱</div>`;
+    if(!bought) div.onclick=()=>{
+      if(G.seeds<item.cost){document.getElementById('shop-sub').textContent='Not enough seeds!';return;}
+      G.seeds-=item.cost; document.getElementById('shop-seed-count').textContent=G.seeds; updateHUD();
+      if(item.type==='weapon'){if(G.weaponIdx<item.idx)G.weaponIdx=item.idx;div.classList.add('bought');document.getElementById('shop-sub').textContent=`Got ${WEAPONS[item.idx].name}!`;}
+      else{G.inventory[item.id]=(G.inventory[item.id]||0)+1;document.getElementById('shop-sub').textContent=`Got ${item.id}!`;}
+    };
+    list.appendChild(div);
+  });
+  show('shop');
+}
+function closeShop(){hide('shop');drawMap();}
+
+// ── MOVEMENT ──────────────────────────────────────────────────
+function tryMove(dc,dr){
+  if(G.inCombat||visible('combat')||visible('story')||visible('shop')||visible('item-panel')||visible('ending')) return;
+  const nr=G.py+dr, nc=G.px+dc;
+  if(nr<0||nr>=ROWS||nc<0||nc>=COLS) return;
+  const tile=G.zones[G.zone].tiles[nr][nc];
+  if(tile===T.TREE) return;
+  G.px=nc; G.py=nr;
+  G.facing=dc>0?1:(dc<0?-1:G.facing);
+  G.walkStep++;
+
+  if(tile===T.CAMP){openShop(G.zone);return;}
+  if(tile===T.STAIRS_UP){
+    if(G.zone>0&&!G.bossDefeated[G.zone]){triggerBoss(G.zone);return;}
+    if(G.zone<4){
+      const nz=G.zone+1;
+      const keys=[null,'zone1','zone2','zone3','zone4'][nz];
+      runStory(keys?[keys]:[],()=>enterZone(nz,true));
+    } else if(G.zone===4&&!G.bossDefeated[4]) triggerBoss(4);
+    return;
+  }
+  if(tile===T.STAIRS_DOWN&&G.zone>0){enterZone(G.zone-1,false);return;}
+
+  if(G.zone>0&&G.zone<4){
+    G.encStep--;
+    if(G.encStep<=0){
+      G.encStep=8+Math.floor(Math.random()*6);
+      const pool=ZONE_ENEMIES[G.zone];
+      if(pool.length){const e={...pool[Math.floor(Math.random()*pool.length)]};e.maxHp=e.hp;e.curHp=e.hp;startCombat(e);}
+    }
+  }
+  drawMap();
+}
+
+function triggerBoss(zone){
+  const b=BOSSES[zone]; if(!b) return;
+  const introKey=['','sentry','scout','tree','warrior'][zone];
+  runStory(introKey?[introKey]:[],()=>{
+    const e={...b};e.curHp=e.hp;
+    startCombat(e);
+  });
+}
+
+// ── ENDING ────────────────────────────────────────────────────
+function showEnding(){
+  if(arenaAnimId){cancelAnimationFrame(arenaAnimId);arenaAnimId=null;}
+  hide('combat');
+  document.getElementById('end-title').textContent='THE GREAT WARRIOR... FALLS';
+  document.getElementById('end-story').innerHTML=
+    `You stand at the top of an impossible forest — grown in seconds in Grandma's backyard.<br><br>`+
+    `The Great Warrior shudders. Its roots go slack. Its pinecones stop falling. Its eighty years of fury quiet down into the sound of wind through old branches.<br><br>`+
+    `"I have stood here... eighty years," it says, slowly. "And the thing that defeats me... is a child... with a STICK."<br><br>`+
+    `It says nothing else. The forest exhales. Somewhere, a single flower grows back into the sun.`;
+  document.getElementById('end-reality').innerHTML=
+    `⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯<br><br>`+
+    `<strong style="color:#bbb">Actually:</strong><br><br>`+
+    `You are hitting Grandma's bush with a stick. You've been doing it for about twenty minutes.<br><br>`+
+    `It's a very satisfying bush to hit.<br><br>`+
+    `Grandma is watching from the kitchen window. She's smiling. She thinks you're having fun.<br><br>`+
+    `<em>You are having fun.</em><br><br>`+
+    `The bush, for the record, is completely fine.`;
+  show('ending');
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────
+function show(id){const el=document.getElementById(id);if(el)el.style.display='flex';}
+function hide(id){const el=document.getElementById(id);if(el)el.style.display='none';}
+function visible(id){const el=document.getElementById(id);return el&&el.style.display!=='none'&&el.style.display!=='';}
+
+// ── INPUT ─────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(visible('shop')||visible('item-panel')||visible('ending')) return;
+  if(visible('story')){if(e.key==='Enter'||e.key===' '){e.preventDefault();storyNext();}return;}
+  const m={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],
+           KeyW:[0,-1],KeyS:[0,1],KeyA:[-1,0],KeyD:[1,0],
+           w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
+  const dir=m[e.code]||m[e.key];
+  if(dir){e.preventDefault();tryMove(...dir);}
+});
+
+// ── MOBILE TOUCH SUPPORT ────────────────────────────────────────
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  document.body.classList.add('is-touch');
+}
+
+(function setupDpad(){
+  const dirs = {
+    'dpad-up':[0,-1], 'dpad-down':[0,1], 'dpad-left':[-1,0], 'dpad-right':[1,0]
+  };
+  Object.keys(dirs).forEach(id=>{
+    const btn = document.getElementById(id);
+    let repeatTimer = null;
+    const fire = () => {
+      if(visible('shop')||visible('item-panel')||visible('ending')||visible('combat')) return;
+      if(visible('story')){ storyNext(); return; }
+      tryMove(...dirs[id]);
+    };
+    btn.addEventListener('touchstart', e=>{
+      e.preventDefault();
+      fire();
+      repeatTimer = setInterval(fire, 180);
+    }, {passive:false});
+    const stop = e => { if(e) e.preventDefault(); clearInterval(repeatTimer); };
+    btn.addEventListener('touchend', stop, {passive:false});
+    btn.addEventListener('touchcancel', stop, {passive:false});
+  });
+})();
+
+// Scale the whole game to fit small screens without changing internal resolution
+function fitToScreen(){
+  const scale = Math.min(window.innerWidth/600, window.innerHeight/540, 1);
+  document.getElementById('wrap').style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', fitToScreen);
+fitToScreen();
+
+// ── MAIN LOOP ─────────────────────────────────────────────────
+function loop(){
+  if(visible('story')) tickStory();
+  else if(!visible('combat')&&!visible('shop')&&!visible('item-panel')&&!visible('ending')) drawMap();
+  requestAnimationFrame(loop);
+}
+
+// ── BOOT ──────────────────────────────────────────────────────
+hide('combat');hide('shop');hide('item-panel');hide('ending');
+hide('zone-flash');
+document.getElementById('story').style.display='none';
+initGame();
+
+setTimeout(()=>{
+  runStory(['intro_0','intro_1','intro_2','intro_3','intro_4','intro_5'],()=>{
+    enterZone(0,true);
+  });
+},80);
+
+loop();
+</script>
+</body>
+</html>
