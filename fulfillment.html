@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>Fulfillment</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none;font-family:'Segoe UI',Verdana,sans-serif;}
+#wrap{position:relative;width:760px;height:560px;transform-origin:center center;box-shadow:0 20px 60px rgba(0,0,0,0.6);}
+canvas{display:block;position:absolute;top:0;left:0;}
+
+/* ── HUD ── */
+#hud{position:absolute;top:8px;left:8px;right:8px;display:flex;justify-content:space-between;z-index:10;pointer-events:none;}
+.hud-box{background:rgba(20,18,10,0.82);border:2px solid rgba(240,180,40,0.35);border-radius:6px;padding:6px 12px;color:#e8d090;font-size:11.5px;font-weight:600;}
+#day-box{color:#90c8e8;border-color:rgba(90,180,220,0.4);}
+#missed-box{color:#e08080;border-color:rgba(200,80,80,0.4);}
+
+/* ── ORDER PANEL ── */
+#order-panel{position:absolute;left:14px;top:54px;width:230px;background:rgba(16,14,8,0.9);border:2px solid #5a4a20;border-radius:10px;padding:12px;z-index:10;}
+#order-panel h3{color:#e8d090;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+#order-empty{color:#7a7060;font-size:12px;text-align:center;padding:14px 0;}
+#order-content{display:none;}
+.order-item-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+#order-icon{font-size:30px;}
+#order-name{color:#f0e0b0;font-size:13px;font-weight:bold;}
+#order-size{color:#a0906a;font-size:10.5px;text-transform:uppercase;}
+#order-note{color:#c0a878;font-size:10px;font-style:italic;margin-bottom:8px;line-height:1.4;min-height:14px;}
+#order-timer-track{height:8px;background:#2a2414;border-radius:4px;overflow:hidden;margin-bottom:10px;}
+#order-timer-fill{height:100%;background:linear-gradient(90deg,#e8a020,#e04040);width:100%;transition:width .1s linear;}
+#stage-label{color:#90c090;font-size:10.5px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+#stage-btn{width:100%;padding:11px;background:#3a5a2a;border:2px solid #5a8a3a;border-radius:6px;color:#d0f0c0;font-size:12.5px;font-weight:bold;cursor:pointer;transition:.12s;}
+#stage-btn:hover{background:#4a7038;}
+#stage-btn:disabled{opacity:.35;cursor:not-allowed;}
+#stage-btn.locked{background:#5a3020;border-color:#8a4a30;color:#f0b090;}
+#fill-progress{height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;margin-top:6px;display:none;}
+#fill-progress-fill{height:100%;background:#c0a040;width:0%;}
+
+/* box choice minigame */
+#box-choice{display:flex;}
+.size-btn{flex:1;background:#2a3a1e;border:2px solid #4a6a30;border-radius:6px;color:#c0e0a0;font-size:9.5px;font-weight:bold;padding:8px 2px;cursor:pointer;line-height:1.6;text-align:center;transition:.12s;}
+.size-btn:hover{background:#3a5228;}
+.size-btn:disabled{opacity:.3;cursor:not-allowed;}
+.size-count{font-weight:normal;color:#8aa878;font-size:9px;}
+.size-btn.wrong{animation:shakeWrong .3s;background:#5a2020;border-color:#8a3030;}
+@keyframes shakeWrong{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+
+/* fill gauge minigame */
+#gauge-track{position:relative;height:22px;background:#1a1a1a;border:2px solid #3a3a20;border-radius:11px;overflow:hidden;margin-bottom:8px;}
+#gauge-zone{position:absolute;top:0;bottom:0;left:40%;width:20%;background:rgba(90,200,90,0.35);border-left:2px dashed #6ac06a;border-right:2px dashed #6ac06a;}
+#gauge-marker{position:absolute;top:0;bottom:0;width:4px;background:#e8d090;left:0;box-shadow:0 0 6px rgba(232,208,144,0.8);}
+#fill-stop-btn{width:100%;padding:10px;background:#5a4a1a;border:2px solid #8a7030;border-radius:6px;color:#f0d090;font-size:12px;font-weight:bold;cursor:pointer;}
+#fill-stop-btn:hover{background:#6a5a24;}
+#fill-result{font-size:10.5px;color:#a09070;margin-top:5px;min-height:14px;text-align:center;}
+
+/* tape minigame */
+#tape-hint{font-size:10.5px;color:#a89870;margin-bottom:6px;text-align:center;}
+#tape-btn{width:100%;padding:10px;background:#3a3a5a;border:2px solid #5a5a8a;border-radius:6px;color:#c0c0f0;font-size:12px;font-weight:bold;cursor:pointer;}
+#tape-btn:hover{background:#4a4a70;}
+#tape-strips{display:flex;gap:4px;justify-content:center;margin-top:8px;}
+.tape-strip-dot{width:16px;height:16px;border-radius:3px;background:#2a2a1a;border:1px solid #4a4a30;}
+.tape-strip-dot.filled{background:#d0c060;}
+
+/* ── QUEUE ── */
+#queue-strip{position:absolute;left:14px;top:340px;width:230px;background:rgba(16,14,8,0.85);border:2px solid #4a3e1a;border-radius:8px;padding:8px 10px;z-index:10;}
+#queue-strip h4{color:#c0a860;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+#queue-tickets{display:flex;gap:5px;flex-wrap:wrap;min-height:22px;}
+.queue-ticket{width:24px;height:24px;background:#3a3018;border:1px solid #6a5828;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;}
+
+/* ── BOX SUPPLY / RESTOCK ── */
+#supply-panel{position:absolute;right:14px;top:54px;width:200px;background:rgba(14,16,20,0.9);border:2px solid #2a4a5a;border-radius:10px;padding:12px;z-index:10;}
+#supply-panel h3{color:#90c8e8;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.supply-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;background:rgba(255,255,255,0.03);border-radius:6px;padding:6px 8px;}
+.supply-info{font-size:11.5px;color:#c8dce8;}
+.supply-count{font-weight:bold;color:#fff;}
+.supply-count.zero{color:#e06060;}
+.restock-btn{padding:5px 9px;background:#1a3a4a;border:1px solid #3a6a8a;border-radius:5px;color:#a0d0e8;font-size:10px;font-weight:bold;cursor:pointer;}
+.restock-btn:hover{background:#2a5a6a;}
+.restock-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+/* ── OVERLAYS ── */
+.overlay{position:absolute;inset:0;background:rgba(6,5,3,0.96);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;z-index:60;}
+.overlay h1{font-size:28px;color:#e8c060;margin-bottom:14px;text-shadow:0 0 20px rgba(220,170,50,0.4);}
+.overlay p{font-size:13px;color:#b0a888;max-width:460px;line-height:1.7;margin-bottom:8px;}
+.overlay button{margin-top:16px;padding:12px 32px;background:#4a3a10;border:2px solid #8a6a20;border-radius:6px;color:#e8d090;font-size:14px;font-weight:700;cursor:pointer;}
+.overlay button:hover{background:#6a5218;}
+#start-overlay{display:flex;}
+#daytrans-overlay h1{color:#90c8e8;text-shadow:0 0 20px rgba(90,180,220,0.4);}
+#gameover-overlay h1{color:#d04040;text-shadow:0 0 20px rgba(220,40,40,0.5);}
+
+/* ── STORY / ENDING SCENES ── */
+#story{position:absolute;inset:0;background:#050403;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px;z-index:70;}
+#story-scene{width:600px;height:280px;border:2px solid #2a2418;border-radius:6px;overflow:hidden;margin-bottom:16px;}
+#story-title{font-size:16px;color:#e8c060;letter-spacing:2px;margin-bottom:6px;text-align:center;}
+#story-text{font-size:13px;color:#a89870;line-height:1.7;text-align:center;max-width:560px;margin-bottom:10px;min-height:40px;}
+#story-btn{padding:11px 28px;background:#2a2414;border:2px solid #5a4a20;border-radius:6px;color:#e8d090;font-size:13px;font-weight:bold;cursor:pointer;}
+#story-btn:hover{background:#3a3018;}
+
+#jumpscare{position:absolute;inset:0;background:#000;display:none;z-index:90;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="gc" width="760" height="560"></canvas>
+  <canvas id="jsCanvas" width="760" height="560" style="position:absolute;top:0;left:0;display:none;z-index:90;"></canvas>
+
+  <div id="hud">
+    <div class="hud-box" id="money-box">💰 $50</div>
+    <div class="hud-box" id="day-box">Day 1 / 5 &nbsp;·&nbsp; 0/6 delivered</div>
+    <div class="hud-box" id="missed-box">Missed: 0/5</div>
+  </div>
+
+  <div id="order-panel">
+    <h3>Current Order</h3>
+    <div id="order-empty">Waiting for next order...</div>
+    <div id="order-content">
+      <div class="order-item-row">
+        <div id="order-icon">📦</div>
+        <div>
+          <div id="order-name">Item</div>
+          <div id="order-size">Size</div>
+        </div>
+      </div>
+      <div id="order-note"></div>
+      <div id="order-timer-track"><div id="order-timer-fill"></div></div>
+      <div id="stage-label">Stage</div>
+
+      <!-- BOX STAGE: pick the correct size, 3-way choice -->
+      <div id="box-choice" style="display:none;gap:6px;">
+        <button class="size-btn" id="size-btn-small" onclick="chooseBox('small')">📦<br>Small<br><span class="size-count" id="cnt-small"></span></button>
+        <button class="size-btn" id="size-btn-medium" onclick="chooseBox('medium')">📦<br>Medium<br><span class="size-count" id="cnt-medium"></span></button>
+        <button class="size-btn" id="size-btn-large" onclick="chooseBox('large')">📦<br>Large<br><span class="size-count" id="cnt-large"></span></button>
+      </div>
+
+      <!-- FILL STAGE: stop the moving marker in the green zone -->
+      <div id="fill-game" style="display:none;">
+        <div id="gauge-track"><div id="gauge-zone"></div><div id="gauge-marker"></div></div>
+        <button id="fill-stop-btn" onclick="stopGauge()">STOP! Pour peanuts</button>
+        <div id="fill-result"></div>
+      </div>
+
+      <!-- TAPE STAGE: click 3 strip zones on the box -->
+      <div id="tape-game" style="display:none;">
+        <div id="tape-hint">Tap the box 3 times to seal it</div>
+        <button id="tape-btn" onclick="applyTapeStrip()">📦 Apply tape strip</button>
+        <div id="tape-strips"></div>
+      </div>
+
+      <!-- DELIVER STAGE -->
+      <button id="stage-btn" onclick="handleStageClick()" style="display:none;">Deliver to customer</button>
+    </div>
+  </div>
+
+  <div id="queue-strip">
+    <h4>Queue</h4>
+    <div id="queue-tickets"></div>
+  </div>
+
+  <div id="supply-panel">
+    <h3>📦 Box Supply</h3>
+    <div class="supply-row">
+      <div class="supply-info">Small: <span class="supply-count" id="sup-small">5</span></div>
+      <button class="restock-btn" onclick="restock('small')">+5 ($12)</button>
+    </div>
+    <div class="supply-row">
+      <div class="supply-info">Medium: <span class="supply-count" id="sup-medium">5</span></div>
+      <button class="restock-btn" onclick="restock('medium')">+5 ($18)</button>
+    </div>
+    <div class="supply-row">
+      <div class="supply-info">Large: <span class="supply-count" id="sup-large">4</span></div>
+      <button class="restock-btn" onclick="restock('large')">+5 ($28)</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="start-overlay">
+    <h1>📦 FULFILLMENT</h1>
+    <p>Welcome to your shift at SwiftBox Fulfillment. Check each order, grab the right size box, fill it with packing peanuts, seal it, and deliver it - before the timer runs out.</p>
+    <p>Keep your box supply stocked using the money you earn. Run out of money, or fall too far behind on orders, and you're done.</p>
+    <p>It's a 5 day week. Good luck.</p>
+    <button onclick="startGame()">Clock In</button>
+  </div>
+
+  <div class="overlay" id="daytrans-overlay">
+    <h1 id="daytrans-title">Day 1 Complete</h1>
+    <p id="daytrans-text"></p>
+    <button onclick="advanceDay()">Continue</button>
+  </div>
+
+  <div class="overlay" id="gameover-overlay">
+    <h1 id="gameover-title">Shift Over</h1>
+    <p id="gameover-text"></p>
+    <button onclick="startGame()">Try Again</button>
+  </div>
+
+  <div id="story">
+    <div id="story-scene"><canvas id="sceneCanvas" width="600" height="280"></canvas></div>
+    <div id="story-title"></div>
+    <div id="story-text"></div>
+    <button id="story-btn" onclick="storyNext()">Continue</button>
+  </div>
+
+  <div id="jumpscare"><canvas id="jsCanvas2" width="760" height="560"></canvas></div>
+</div>
+
+<script>
+const gc = document.getElementById('gc'), gx = gc.getContext('2d');
+const sc = document.getElementById('sceneCanvas'), sx = sc.getContext('2d');
+const jc2 = document.getElementById('jsCanvas2'), jx2 = jc2.getContext('2d');
+const W = 760, H = 560;
+
+// ── ITEM POOLS BY WEIRDNESS TIER ───────────────────────────────
+const ITEMS_TIER1 = [
+  { name:'Phone Case', icon:'📱', size:'small' },
+  { name:'Bluetooth Speaker', icon:'🔊', size:'medium' },
+  { name:'Dog Chew Toy', icon:'🦴', size:'small' },
+  { name:'Yoga Mat', icon:'🧘', size:'medium' },
+  { name:'Coffee Maker', icon:'☕', size:'large' },
+  { name:'Novel (Paperback)', icon:'📖', size:'small' },
+  { name:'Running Shoes', icon:'👟', size:'medium' },
+  { name:'Desk Lamp', icon:'💡', size:'medium' },
+  { name:'Office Chair', icon:'🪑', size:'large' },
+];
+const ITEMS_TIER2 = [
+  { name:'Taxidermied Squirrel', icon:'🐿️', size:'medium', note:'"For a school project," they said.' },
+  { name:'Jar of Human Teeth', icon:'🦷', size:'small', note:'Do not ask.' },
+  { name:'12 Live Crickets', icon:'🦗', size:'small', note:'"They\'re for my snake. Probably."' },
+  { name:'Mannequin Head (Used)', icon:'💇', size:'medium', note:'Slightly warm to the touch upon arrival.' },
+  { name:'Bag of Doll Eyes', icon:'👁️', size:'small', note:'Assorted colors. All watching.' },
+  { name:'Antique Mirror', icon:'🪞', size:'large', note:'Customer requests it be shipped face-down.' },
+];
+const ITEMS_TIER3 = [
+  { name:"A Stranger's Diary", icon:'📔', size:'small', note:'"It\'s not mine. I just need it back."' },
+  { name:'50ft of Rope', icon:'🪢', size:'medium', note:'"Just in case." No further explanation given.' },
+  { name:'Single Child\'s Shoe', icon:'👶', size:'small', note:'Customer wants the matching one "if you ever find it."' },
+  { name:'Locked Wooden Box', icon:'🗝️', size:'medium', note:'Label reads: DO NOT OPEN. DO NOT SHAKE.' },
+  { name:'Photographs of a House', icon:'🖼️', size:'small', note:'"I need to know who lives there now."' },
+  { name:'Bag of Fingernail Clippings', icon:'✂️', size:'small', note:'Order note is just three question marks.' },
+];
+const FINAL_ITEM = { name:'Handgun', icon:'🔫', size:'medium', note:'"For the person who\'s been following me."' };
+
+const DAY_QUOTA = [6, 7, 8, 8, 6]; // orders needed to clear each day (day 5 ends early on the special order)
+const PRICES = { small: 8, medium: 14, large: 22 };
+const RESTOCK_COST = { small: 12, medium: 18, large: 28 };
+const RESTOCK_AMT = 5;
+
+// ── STATE ─────────────────────────────────────────────────────
+let money = 50;
+let boxSupply = { small: 5, medium: 5, large: 4 };
+let day = 1;
+let ordersToday = 0;
+let missedOrders = 0;
+let running = false;
+let queue = [];
+let currentOrder = null;
+let orderIdCounter = 0;
+let spawnTimer = 0;
+let finalOrderQueued = false;
+let finalOrderDelivered = false;
+let gameTime = 0;
+let beltPhase = 0;
+
+const MAX_QUEUE = 5;
+
+function resetGame() {
+  money = 50; boxSupply = { small:5, medium:5, large:4 };
+  day = 1; ordersToday = 0; missedOrders = 0;
+  queue = []; currentOrder = null; orderIdCounter = 0; spawnTimer = 1;
+  finalOrderQueued = false; finalOrderDelivered = false; gameTime = 0;
+  updateHUD(); renderOrderPanel(); renderQueue();
+}
+
+function startGame() {
+  resetGame(); running = true;
+  hide('start-overlay'); hide('daytrans-overlay'); hide('gameover-overlay');
+  document.getElementById('story').style.display = 'none';
+  document.getElementById('jumpscare').style.display = 'none';
+}
+function hide(id){ document.getElementById(id).style.display='none'; }
+function show(id){ document.getElementById(id).style.display='flex'; }
+
+// ── ITEM POOL SELECTION BY DAY ──────────────────────────────────
+function pickItemForDay(d) {
+  let pool;
+  if (d <= 2) pool = ITEMS_TIER1;
+  else if (d === 3) pool = ITEMS_TIER1.concat(ITEMS_TIER2, ITEMS_TIER2);
+  else pool = ITEMS_TIER2.concat(ITEMS_TIER3, ITEMS_TIER3);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function spawnOrder() {
+  if (queue.length >= MAX_QUEUE) {
+    // demand outpaced capacity - counts as a miss
+    registerMiss();
+    return;
+  }
+  let item;
+  if (day === 5 && !finalOrderQueued && ordersToday === DAY_QUOTA[4]-1) {
+    item = FINAL_ITEM;
+    finalOrderQueued = true;
+  } else {
+    item = pickItemForDay(day);
+  }
+  const deadline = Math.max(14, 26 - day*2);
+  queue.push({ id: orderIdCounter++, item, deadline, timeLeft: deadline, stage: 'box', fill: 0, isFinal: item===FINAL_ITEM });
+  renderQueue();
+  if (!currentOrder) advanceQueue();
+}
+
+function advanceQueue() {
+  if (currentOrder || queue.length === 0) return;
+  currentOrder = queue.shift();
+  renderQueue();
+  renderOrderPanel();
+}
+
+function registerMiss() {
+  missedOrders++;
+  updateHUD();
+  if (missedOrders >= 5) {
+    running = false;
+    document.getElementById('gameover-title').textContent = "Couldn't Keep Up";
+    document.getElementById('gameover-text').textContent = "Too many orders slipped through the cracks. SwiftBox has let you go.";
+    setTimeout(()=>show('gameover-overlay'), 200);
+  }
+}
+
+// ── STAGE HANDLING ───────────────────────────────────────────
+function handleStageClick() {
+  // only used now for the final "Deliver" stage
+  if (!currentOrder || !running) return;
+  if (currentOrder.stage === 'deliver') completeOrder(currentOrder);
+}
+
+function flashBtn(msg) {
+  showToast(msg);
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  let t = document.getElementById('game-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'game-toast';
+    t.style.cssText = 'position:absolute;top:44px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#e0c060;padding:6px 16px;border-radius:16px;font-size:11px;font-weight:bold;z-index:40;pointer-events:none;transition:opacity .3s;';
+    document.getElementById('wrap').appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.style.opacity = '0'; }, 900);
+}
+
+// ── MINIGAME 1: BOX CHOICE ─────────────────────────────────────
+function chooseBox(size) {
+  if (!currentOrder || currentOrder.stage !== 'box') return;
+  const correct = currentOrder.item.size;
+  if (size !== correct) {
+    const btn = document.getElementById('size-btn-'+size);
+    btn.classList.add('wrong');
+    setTimeout(()=>btn.classList.remove('wrong'), 300);
+    currentOrder.timeLeft = Math.max(2, currentOrder.timeLeft - 2); // wrong guess costs time
+    showToast('Wrong size! -2s');
+    updateTimerBar();
+    return;
+  }
+  if (boxSupply[correct] <= 0) { showToast('Out of stock! Restock ->'); return; }
+  boxSupply[correct]--;
+  currentOrder.stage = 'fill';
+  spawnPackAnim('grab');
+  updateHUD(); renderOrderPanel();
+}
+
+// ── MINIGAME 2: FILL - stop the sweeping marker in the green zone ─
+let gaugePos = 0, gaugeDir = 1, gaugeRAF = null, gaugeSpeed = 1.3;
+function runGauge() {
+  const marker = document.getElementById('gauge-marker');
+  if (!marker || !currentOrder || currentOrder.stage !== 'fill') { gaugeRAF = null; return; }
+  gaugePos += gaugeDir * gaugeSpeed;
+  if (gaugePos >= 96) { gaugePos = 96; gaugeDir = -1; }
+  if (gaugePos <= 0) { gaugePos = 0; gaugeDir = 1; }
+  marker.style.left = gaugePos + '%';
+  gaugeRAF = requestAnimationFrame(runGauge);
+}
+function startGaugeGame() {
+  gaugePos = 0; gaugeDir = 1;
+  gaugeSpeed = 1.2 + (day-1)*0.15; // gets a little faster on later days
+  if (!gaugeRAF) gaugeRAF = requestAnimationFrame(runGauge);
+}
+function stopGauge() {
+  if (!currentOrder || currentOrder.stage !== 'fill') return;
+  const zoneStart = 40, zoneEnd = 60; // matches CSS #gauge-zone left:40% width:20%
+  const perfect = gaugePos >= zoneStart+4 && gaugePos <= zoneEnd-4;
+  const hit = gaugePos >= zoneStart && gaugePos <= zoneEnd;
+  const resultEl = document.getElementById('fill-result');
+
+  spawnPeanutParticles(perfect ? 22 : (hit ? 14 : 6));
+
+  if (hit) {
+    currentOrder.fillAttempts = (currentOrder.fillAttempts||0) + 1;
+    if (perfect) {
+      resultEl.textContent = 'Perfect pour! Box filled.';
+      currentOrder.stage = 'tape';
+      if (gaugeRAF) { cancelAnimationFrame(gaugeRAF); gaugeRAF = null; }
+      const bonus = 2;
+      money += bonus; updateHUD();
+      spawnCashPopup(`+$${bonus} bonus!`);
+      renderOrderPanel();
+    } else {
+      resultEl.textContent = 'Good enough - topping it off...';
+      if (currentOrder.fillAttempts >= 2) {
+        currentOrder.stage = 'tape';
+        if (gaugeRAF) { cancelAnimationFrame(gaugeRAF); gaugeRAF = null; }
+        renderOrderPanel();
+      } else {
+        gaugeSpeed += 0.15;
+      }
+    }
+  } else {
+    resultEl.textContent = 'Missed - peanuts everywhere. Try again!';
+  }
+}
+
+// ── MINIGAME 3: TAPE - click 3 strip zones ──────────────────────
+function applyTapeStrip() {
+  if (!currentOrder || currentOrder.stage !== 'tape') return;
+  currentOrder.tapeStrips = (currentOrder.tapeStrips||0) + 1;
+  const dots = document.querySelectorAll('.tape-strip-dot');
+  if (dots[currentOrder.tapeStrips-1]) dots[currentOrder.tapeStrips-1].classList.add('filled');
+  spawnPackAnim('tape');
+  if (currentOrder.tapeStrips >= 3) {
+    currentOrder.stage = 'deliver';
+    renderOrderPanel();
+  }
+}
+
+function completeOrder(o) {
+  const price = PRICES[o.item.size] + (day-1)*2;
+  money += price;
+  ordersToday++;
+  spawnDeliveryAnim();
+  spawnCashPopup(`+$${price}`);
+  currentOrder = null;
+  updateHUD();
+
+  if (o.isFinal) {
+    finalOrderDelivered = true;
+    running = false;
+    setTimeout(()=>startEndingSequence(), 400);
+    return;
+  }
+
+  if (ordersToday >= DAY_QUOTA[day-1]) {
+    running = false;
+    document.getElementById('daytrans-title').textContent = `Day ${day} Complete`;
+    document.getElementById('daytrans-text').textContent = day < 5
+      ? `You cleared today's orders. $${money} in the bank. Get some rest - tomorrow's another shift.`
+      : `That's everything... except one more order that just came in.`;
+    setTimeout(()=>show('daytrans-overlay'), 300);
+  } else {
+    advanceQueue();
+    renderOrderPanel();
+  }
+}
+
+function advanceDay() {
+  hide('daytrans-overlay');
+  day++;
+  ordersToday = 0;
+  spawnTimer = 0.5;
+  running = true;
+  renderOrderPanel();
+}
+
+// ── RESTOCK ──────────────────────────────────────────────────
+function restock(size) {
+  const cost = RESTOCK_COST[size];
+  if (money < cost) { return; }
+  money -= cost;
+  boxSupply[size] += RESTOCK_AMT;
+  updateHUD();
+}
+
+// ── UPDATE LOOP ──────────────────────────────────────────────
+function update(dt) {
+  if (!running) { gameTime += dt; return; }
+  gameTime += dt; beltPhase += dt;
+
+  spawnTimer -= dt;
+  const spawnInterval = Math.max(3.5, 8 - day*0.7);
+  if (spawnTimer <= 0 && !(finalOrderQueued && day===5)) {
+    spawnOrder();
+    spawnTimer = spawnInterval + Math.random()*2;
+  } else if (spawnTimer <=0 && finalOrderQueued && day===5 && queue.length===0 && !currentOrder && !finalOrderDelivered) {
+    // make sure the final order actually gets pushed if timer logic missed it
+  }
+
+  if (currentOrder) {
+    currentOrder.timeLeft -= dt;
+    updateTimerBar();
+    if (currentOrder.timeLeft <= 0) {
+      const wasFinal = currentOrder.isFinal;
+      currentOrder = null;
+      registerMiss();
+      renderOrderPanel();
+      if (wasFinal) { finalOrderQueued = false; } // let another one queue up eventually
+      else advanceQueue();
+    }
+  }
+
+  updateParticles(dt);
+  updateFallingBoxEvent(dt);
+
+  // also drain patience on queued orders slightly (keeps pressure realistic) - but don't expire them, just visual
+  if (money <= 0 && boxSupply.small<=0 && boxSupply.medium<=0 && boxSupply.large<=0 && running) {
+    running = false;
+    document.getElementById('gameover-title').textContent = 'Bankrupt';
+    document.getElementById('gameover-text').textContent = "You're out of money and out of boxes. SwiftBox terminates your contract.";
+    setTimeout(()=>show('gameover-overlay'), 200);
+  }
+}
+
+function updateTimerBar() {
+  if (!currentOrder) return;
+  const pct = Math.max(0, currentOrder.timeLeft/currentOrder.deadline)*100;
+  document.getElementById('order-timer-fill').style.width = pct+'%';
+}
+
+// ── RENDER ORDER PANEL (DOM) ────────────────────────────────────
+function renderOrderPanel() {
+  const empty = document.getElementById('order-empty');
+  const content = document.getElementById('order-content');
+  if (!currentOrder) {
+    empty.style.display='block'; content.style.display='none';
+    if (gaugeRAF) { cancelAnimationFrame(gaugeRAF); gaugeRAF = null; }
+    return;
+  }
+  empty.style.display = 'none'; content.style.display = 'block';
+
+  const o = currentOrder;
+  document.getElementById('order-icon').textContent = o.item.icon;
+  document.getElementById('order-name').textContent = o.item.name;
+  document.getElementById('order-size').textContent = o.item.size + ' box';
+  document.getElementById('order-note').textContent = o.item.note || '';
+  updateTimerBar();
+
+  // hide all stage panels first
+  document.getElementById('box-choice').style.display = 'none';
+  document.getElementById('fill-game').style.display = 'none';
+  document.getElementById('tape-game').style.display = 'none';
+  document.getElementById('stage-btn').style.display = 'none';
+  if (gaugeRAF) { cancelAnimationFrame(gaugeRAF); gaugeRAF = null; }
+
+  if (o.stage === 'box') {
+    document.getElementById('stage-label').textContent = 'Step 1: Grab the Right Box';
+    document.getElementById('box-choice').style.display = 'flex';
+    ['small','medium','large'].forEach(sz => {
+      document.getElementById('cnt-'+sz).textContent = boxSupply[sz]+' left';
+      document.getElementById('size-btn-'+sz).disabled = boxSupply[sz] <= 0;
+    });
+  } else if (o.stage === 'fill') {
+    document.getElementById('stage-label').textContent = 'Step 2: Fill with Packing Peanuts';
+    document.getElementById('fill-game').style.display = 'block';
+    document.getElementById('fill-result').textContent = 'Stop the marker in the green zone!';
+    o.fillAttempts = 0;
+    startGaugeGame();
+  } else if (o.stage === 'tape') {
+    document.getElementById('stage-label').textContent = 'Step 3: Seal the Box';
+    document.getElementById('tape-game').style.display = 'block';
+    o.tapeStrips = 0;
+    document.getElementById('tape-strips').innerHTML = '<div class="tape-strip-dot"></div><div class="tape-strip-dot"></div><div class="tape-strip-dot"></div>';
+  } else if (o.stage === 'deliver') {
+    document.getElementById('stage-label').textContent = 'Step 4: Deliver';
+    const btn = document.getElementById('stage-btn');
+    btn.style.display = 'block';
+    btn.textContent = 'Deliver to customer';
+    btn.disabled = false;
+  }
+}
+
+function renderQueue() {
+  const el = document.getElementById('queue-tickets');
+  el.innerHTML = '';
+  queue.forEach(o => {
+    const d = document.createElement('div');
+    d.className = 'queue-ticket';
+    d.textContent = o.item.icon;
+    el.appendChild(d);
+  });
+}
+
+function updateHUD() {
+  document.getElementById('money-box').textContent = `💰 $${money}`;
+  document.getElementById('day-box').textContent = `Day ${day} / 5 · ${ordersToday}/${DAY_QUOTA[day-1]} delivered`;
+  document.getElementById('missed-box').textContent = `Missed: ${missedOrders}/5`;
+  ['small','medium','large'].forEach(sz => {
+    const el = document.getElementById('sup-'+sz);
+    el.textContent = boxSupply[sz];
+    el.classList.toggle('zero', boxSupply[sz]<=0);
+  });
+}
+
+// ── WAREHOUSE SCENE RENDER (canvas background) ──────────────────
+function renderScene() {
+  const grd = gx.createLinearGradient(0,0,0,H);
+  grd.addColorStop(0,'#2a2818'); grd.addColorStop(1,'#181610');
+  gx.fillStyle = grd; gx.fillRect(0,0,W,H);
+
+  // shelving in background
+  for (let i=0;i<6;i++) {
+    gx.fillStyle = '#3a3624';
+    gx.fillRect(60+i*115, 40, 90, 220);
+    gx.fillStyle = '#26241a';
+    for (let s=0;s<4;s++) gx.fillRect(60+i*115, 40+s*55, 90, 6);
+    // random boxes on shelves
+    for (let s=0;s<3;s++) {
+      gx.fillStyle = ['#8a6a3a','#6a7a8a','#8a5a5a'][ (i+s)%3 ];
+      gx.fillRect(70+i*115+((s*7)%20), 48+s*55, 30, 20);
+    }
+  }
+
+  // conveyor belt across the middle-bottom
+  const beltY = H-140;
+  gx.fillStyle = '#1a1a1a'; gx.fillRect(0, beltY, W, 60);
+  gx.fillStyle = '#0e0e0e';
+  const off = (beltPhase*40)%40;
+  for (let i=-1;i<W/40+1;i++) gx.fillRect(i*40-off, beltY, 20, 60);
+
+  // a box sliding on the belt (visual flavor, tied to current stage)
+  const bx = 380 + Math.sin(beltPhase*0.6)*4;
+  const by = beltY+10;
+  window._boxScreenPos = {x:bx, y:by}; // used by particle spawners
+
+  if (currentOrder && !deliverAnim.active) {
+    const popScale = packPopT > 0 ? 1 + packPopT*0.25 : 1;
+    gx.save(); gx.translate(bx, by+20); gx.scale(popScale, popScale); gx.translate(-bx, -(by+20));
+    gx.fillStyle = '#8a6a3a'; gx.fillRect(bx-24, by, 48, 40);
+    gx.fillStyle = '#6a4e26'; gx.fillRect(bx-24, by, 48, 8);
+    if (currentOrder.stage !== 'box') {
+      gx.font='22px sans-serif'; gx.textAlign='center';
+      gx.fillText(currentOrder.item.icon, bx, by+28);
+    }
+    // peanut fill level rises visually with fill attempts
+    if (currentOrder.stage === 'tape' || currentOrder.stage === 'deliver') {
+      gx.fillStyle = 'rgba(224,192,120,0.5)';
+      gx.fillRect(bx-22, by+26, 44, 12);
+    }
+    // tape strips drawn progressively
+    const strips = currentOrder.tapeStrips || 0;
+    gx.strokeStyle = '#c8a020'; gx.lineWidth=4;
+    if (strips>=1) { gx.beginPath(); gx.moveTo(bx-24,by+10); gx.lineTo(bx+24,by+10); gx.stroke(); }
+    if (strips>=2) { gx.beginPath(); gx.moveTo(bx-24,by+20); gx.lineTo(bx+24,by+20); gx.stroke(); }
+    if (strips>=3) { gx.beginPath(); gx.moveTo(bx,by); gx.lineTo(bx,by+40); gx.stroke(); }
+    gx.restore();
+  }
+
+  // delivery fly-away animation
+  if (deliverAnim.active) {
+    const t = deliverAnim.t;
+    const dx = bx + t*260;
+    const dOpacity = Math.max(0, 1-t*1.1);
+    gx.globalAlpha = dOpacity;
+    gx.fillStyle = '#8a6a3a'; gx.fillRect(dx-24, by-t*30, 48, 40);
+    gx.font='22px sans-serif'; gx.textAlign='center';
+    gx.fillText(deliverAnim.icon, dx, by-t*30+28);
+    gx.globalAlpha = 1;
+    // little delivery truck speeding off
+    gx.save(); gx.translate(dx+40, by+16);
+    gx.fillStyle = '#3a5a8a'; gx.fillRect(-20,-10,40,20);
+    gx.fillStyle = '#2a4a7a'; gx.fillRect(14,-6,14,14);
+    gx.fillStyle = '#1a1a1a';
+    gx.beginPath(); gx.arc(-10,12,5,0,Math.PI*2); gx.fill();
+    gx.beginPath(); gx.arc(12,12,5,0,Math.PI*2); gx.fill();
+    gx.restore();
+  }
+
+  // falling-box bonus event
+  if (fallingBox.active) {
+    gx.save(); gx.translate(fallingBox.x, fallingBox.y);
+    gx.fillStyle = '#a06a3a'; gx.fillRect(-16,-14,32,28);
+    gx.fillStyle = '#7a4e26'; gx.fillRect(-16,-14,32,6);
+    gx.font='9px sans-serif'; gx.fillStyle='#2a1a08'; gx.textAlign='center';
+    gx.fillText('FRAGILE', 0, 4);
+    gx.restore();
+  }
+
+  drawParticles();
+
+  // floor
+  gx.fillStyle = '#141310'; gx.fillRect(0, beltY+60, W, H-(beltY+60));
+
+  // warning stripes at bottom
+  gx.fillStyle = '#c8a020';
+  for (let i=0;i<W;i+=30) { gx.save(); gx.translate(i,H-10); gx.rotate(0.5); gx.fillRect(-8,-8,16,16); gx.restore(); }
+}
+
+// ── ANIMATIONS & PARTICLES ──────────────────────────────────────
+let particles = [];
+let packPopT = 0;
+let deliverAnim = { active:false, t:0, icon:'📦' };
+let fallingBox = { active:false, x:0, y:0, vy:0, timer: 6+Math.random()*10 };
+
+function spawnPackAnim(type) {
+  if (type === 'grab') packPopT = 1;
+  if (type === 'tape') {
+    const p = window._boxScreenPos || {x:380,y:220};
+    for (let i=0;i<6;i++) particles.push({ x:p.x+(Math.random()-.5)*40, y:p.y+20, vx:(Math.random()-.5)*1.5, vy:-1-Math.random(), life:16, maxLife:16, kind:'spark' });
+  }
+}
+function spawnPeanutParticles(n) {
+  const p = window._boxScreenPos || {x:380,y:220};
+  for (let i=0;i<n;i++) {
+    particles.push({ x:p.x+(Math.random()-.5)*36, y:p.y-40-Math.random()*20, vx:(Math.random()-.5)*0.6, vy:2+Math.random()*2, life:40, maxLife:40, kind:'peanut' });
+  }
+}
+function spawnCashPopup(text) {
+  const p = window._boxScreenPos || {x:380,y:220};
+  particles.push({ x:p.x, y:p.y-10, vx:0, vy:-1.2, life:50, maxLife:50, kind:'text', text });
+}
+function spawnDeliveryAnim() {
+  deliverAnim.active = true; deliverAnim.t = 0;
+  deliverAnim.icon = currentOrder ? currentOrder.item.icon : '📦';
+  setTimeout(()=>{ deliverAnim.active = false; }, 900);
+}
+
+function updateParticles(dt) {
+  if (packPopT > 0) packPopT = Math.max(0, packPopT - dt*4);
+  if (deliverAnim.active) deliverAnim.t += dt*1.4;
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if (p.kind === 'peanut') p.vy += 0.15; // gravity
+    p.life--;
+  });
+  particles = particles.filter(p => p.life > 0);
+}
+function drawParticles() {
+  particles.forEach(p => {
+    const a = Math.max(0, p.life/p.maxLife);
+    if (p.kind === 'peanut') {
+      gx.globalAlpha = a;
+      gx.fillStyle = '#e0c888';
+      gx.beginPath(); gx.ellipse(p.x, p.y, 3, 2, 0.4, 0, Math.PI*2); gx.fill();
+      gx.globalAlpha = 1;
+    } else if (p.kind === 'spark') {
+      gx.globalAlpha = a;
+      gx.fillStyle = '#f0d060';
+      gx.beginPath(); gx.arc(p.x, p.y, 2, 0, Math.PI*2); gx.fill();
+      gx.globalAlpha = 1;
+    } else if (p.kind === 'text') {
+      gx.globalAlpha = a;
+      gx.fillStyle = '#80e080'; gx.font='bold 13px sans-serif'; gx.textAlign='center';
+      gx.fillText(p.text, p.x, p.y);
+      gx.globalAlpha = 1;
+    }
+  });
+}
+
+// ── BONUS MINIGAME: a box falls off the shelf, click it fast! ──
+function updateFallingBoxEvent(dt) {
+  if (!running) return;
+  if (!fallingBox.active) {
+    fallingBox.timer -= dt;
+    if (fallingBox.timer <= 0) {
+      fallingBox.active = true;
+      fallingBox.x = 100 + Math.random()*550;
+      fallingBox.y = 60;
+      fallingBox.vy = 0.6;
+    }
+    return;
+  }
+  fallingBox.y += fallingBox.vy;
+  fallingBox.vy += 0.12;
+  if (fallingBox.y > H-140) {
+    // hit the ground, missed it
+    fallingBox.active = false;
+    fallingBox.timer = 12 + Math.random()*14;
+  }
+}
+gc.addEventListener('click', e => handleCanvasClick(e.clientX, e.clientY));
+gc.addEventListener('touchstart', e => { const t=e.touches[0]; handleCanvasClick(t.clientX, t.clientY); }, {passive:true});
+function handleCanvasClick(clientX, clientY) {
+  if (!fallingBox.active) return;
+  const rect = gc.getBoundingClientRect();
+  const mx = (clientX-rect.left)*(W/rect.width), my = (clientY-rect.top)*(H/rect.height);
+  if (Math.hypot(mx-fallingBox.x, my-fallingBox.y) < 30) {
+    fallingBox.active = false;
+    fallingBox.timer = 12 + Math.random()*14;
+    const bonus = 5 + Math.floor(Math.random()*8);
+    money += bonus;
+    updateHUD();
+    particles.push({ x:fallingBox.x, y:fallingBox.y, vx:0, vy:-1.2, life:50, maxLife:50, kind:'text', text:`Caught it! +$${bonus}` });
+    for (let i=0;i<10;i++) particles.push({ x:fallingBox.x, y:fallingBox.y, vx:(Math.random()-.5)*3, vy:-1-Math.random()*2, life:22, maxLife:22, kind:'spark' });
+  }
+}
+
+// ── STORY / ENDING SEQUENCE ─────────────────────────────────────
+let storyQ = [], storyCB = null;
+const ENDING_SCENES = [
+  { title:'ORDER DELIVERED', text:'The customer takes the box without a word and shuts the door.', draw(t,c,w,h){
+      c.fillStyle='#0a0a0a'; c.fillRect(0,0,w,h);
+      c.fillStyle='#3a2a1a'; c.fillRect(w*0.3,h*0.2,w*0.4,h*0.7);
+      c.fillStyle='#1a1410'; c.fillRect(w*0.45,h*0.4,w*0.1,h*0.3);
+      c.font='40px sans-serif'; c.textAlign='center'; c.fillStyle='#e8d090';
+      c.fillText('🔫', w*0.5, h*0.35);
+  }},
+  { title:'BACK TO THE WAREHOUSE', text:'Your shift is over. You head back to SwiftBox to clock out.', draw(t,c,w,h){
+      c.fillStyle='#0a1420'; c.fillRect(0,0,w,h);
+      c.fillStyle='#1a2430'; c.fillRect(0,h*0.6,w,h*0.4);
+      for(let i=0;i<8;i++){ c.fillStyle='rgba(255,220,150,0.15)'; c.fillRect(30+i*70,20,10,h*0.5); }
+  }},
+  { title:'SOMETHING IS WRONG', text:'You smell smoke before you see it. Then you see it.', draw(t,c,w,h){
+      c.fillStyle='#100604'; c.fillRect(0,0,w,h);
+      // burnt building silhouette
+      c.fillStyle='#1a0e08'; c.fillRect(w*0.15,h*0.35,w*0.7,h*0.55);
+      c.fillStyle='#0a0503'; c.fillRect(w*0.2,h*0.4,w*0.15,h*0.2); // broken window
+      c.fillStyle='#0a0503'; c.fillRect(w*0.65,h*0.4,w*0.15,h*0.2);
+      // flames/embers
+      for(let i=0;i<14;i++){
+        const fx3 = w*0.2+Math.random()*w*0.6, fy3 = h*0.3+Math.random()*h*0.5;
+        c.fillStyle = `rgba(${200+Math.random()*55|0},${80+Math.random()*80|0},20,${0.3+Math.random()*0.4})`;
+        c.beginPath(); c.arc(fx3,fy3,2+Math.random()*4,0,Math.PI*2); c.fill();
+      }
+      c.fillStyle='rgba(255,140,40,0.08)'; c.fillRect(0,0,w,h);
+  }},
+  { title:'THE WAREHOUSE BURNED DOWN', text:'While you were out on that last delivery, someone set the whole place on fire.', draw(t,c,w,h){
+      c.fillStyle='#0c0604'; c.fillRect(0,0,w,h);
+      c.fillStyle='#1a0e08'; c.fillRect(w*0.1,h*0.3,w*0.8,h*0.6);
+      c.strokeStyle='rgba(80,40,20,0.6)'; c.lineWidth=2;
+      for(let i=0;i<6;i++){ c.beginPath(); c.moveTo(w*0.15+i*w*0.12,h*0.3); c.lineTo(w*0.1+i*w*0.13,h*0.9); c.stroke(); }
+      c.fillStyle='rgba(255,100,30,0.1)'; c.fillRect(0,0,w,h);
+  }},
+  { title:'YOU GO IN TO LOOK', text:'You should call someone. Instead, you walk inside.', draw(t,c,w,h){
+      c.fillStyle='#050302'; c.fillRect(0,0,w,h);
+      // a lone figure (the player) small in the dark doorway
+      const px = w*0.5, py = h*0.75;
+      c.fillStyle='#1a1a1a'; c.fillRect(px-6,py-24,12,24);
+      c.beginPath(); c.arc(px,py-28,7,0,Math.PI*2); c.fill();
+  }},
+  { title:'', text:'', draw(t,c,w,h){
+      // shadowy figure appears
+      c.fillStyle='#020202'; c.fillRect(0,0,w,h);
+      const reveal = Math.min(1, t*1.4);
+      c.fillStyle = `rgba(5,5,8,${reveal})`;
+      const fx4 = w*0.62, fy4 = h*0.55;
+      c.beginPath();
+      c.ellipse(fx4, fy4, 26*reveal, 70*reveal, 0, 0, Math.PI*2);
+      c.fill();
+      if (reveal>0.6) {
+        c.fillStyle = `rgba(180,10,10,${(reveal-0.6)*2})`;
+        c.beginPath(); c.arc(fx4-8,fy4-40,2.5,0,Math.PI*2); c.fill();
+        c.beginPath(); c.arc(fx4+8,fy4-40,2.5,0,Math.PI*2); c.fill();
+      }
+  }},
+];
+
+function runStorySeq(scenes, cb) {
+  storyQ = [...scenes]; storyCB = cb;
+  advanceStory();
+}
+let sceneStart=0, sceneKeyIdx=0;
+function advanceStory() {
+  if (!storyQ.length) {
+    document.getElementById('story').style.display = 'none';
+    if (storyCB) { const c=storyCB; storyCB=null; c(); }
+    return;
+  }
+  const scene = storyQ.shift();
+  document.getElementById('story-title').textContent = scene.title;
+  document.getElementById('story-text').textContent = scene.text;
+  document.getElementById('story').style.display = 'flex';
+  sceneStart = performance.now();
+  drawStoryScene(scene, 0);
+  window._currentScene = scene;
+}
+function drawStoryScene(scene, t) {
+  sx.clearRect(0,0,600,280);
+  scene.draw(t, sx, 600, 280);
+}
+function storyNext() { advanceStory(); }
+
+function tickStoryAnim() {
+  if (document.getElementById('story').style.display !== 'flex' || !window._currentScene) return;
+  const t = (performance.now()-sceneStart)/1000;
+  drawStoryScene(window._currentScene, t);
+}
+
+function startEndingSequence() {
+  runStorySeq(ENDING_SCENES.slice(0,5), () => {
+    // final beat: shadowy figure + gunshot jumpscare
+    runStorySeq([ENDING_SCENES[5]], () => triggerFinalJumpscare());
+  });
+}
+
+function triggerFinalJumpscare() {
+  document.getElementById('jumpscare').style.display = 'flex';
+  let t = 0;
+  function frame() {
+    t++;
+    jx2.fillStyle = t%2===0 ? '#fff' : '#8a0000';
+    jx2.fillRect(0,0,W,H);
+    if (t < 6) requestAnimationFrame(frame);
+    else {
+      jx2.fillStyle = '#000'; jx2.fillRect(0,0,W,H);
+      jx2.fillStyle = '#c02020'; jx2.font='bold 34px monospace'; jx2.textAlign='center';
+      jx2.fillText('GAME OVER', W/2, H/2-10);
+      jx2.fillStyle='#888'; jx2.font='13px monospace';
+      jx2.fillText('You never saw who fired.', W/2, H/2+22);
+      showRestartOnJumpscare();
+    }
+  }
+  frame();
+}
+function showRestartOnJumpscare() {
+  let btn = document.getElementById('jumpscare-restart');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'jumpscare-restart';
+    btn.textContent = 'Play Again';
+    btn.style.cssText = 'position:absolute;bottom:60px;left:50%;transform:translateX(-50%);padding:12px 30px;background:#2a1414;border:2px solid #6a2020;border-radius:6px;color:#e0a0a0;font-size:14px;font-weight:bold;cursor:pointer;z-index:95;';
+    btn.onclick = () => {
+      document.getElementById('jumpscare').style.display='none';
+      btn.remove();
+      startGame();
+    };
+    document.getElementById('jumpscare').appendChild(btn);
+  }
+}
+
+// ── LOOP ──────────────────────────────────────────────────────
+let last = 0;
+function loop(ts) {
+  const dt = Math.min((ts-last)/1000, 0.05);
+  last = ts;
+  update(dt);
+  renderScene();
+  tickStoryAnim();
+  requestAnimationFrame(loop);
+}
+
+function fitToScreen(){
+  const scale = Math.min(window.innerWidth/W, window.innerHeight/H, 1);
+  document.getElementById('wrap').style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', fitToScreen);
+fitToScreen();
+
+updateHUD(); renderOrderPanel(); renderQueue();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
