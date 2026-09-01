@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bones</title>
+  <title data-en="Bones" data-es="Bones">Bones</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -261,16 +261,46 @@
       header h1 { font-size: 2.4rem; }
       .grid { gap: 1.2rem; }
     }
+    /* ── LANGUAGE TOGGLE ─────────────────────────────────────────── */
+    #lang-toggle {
+      position: fixed;
+      top: 1.2rem;
+      right: 1.5rem;
+      z-index: 100;
+      background-color: var(--card-bg);
+      border: 2.5px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-main);
+      box-shadow: 4px 4px 0px var(--shadow-color);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    #lang-toggle:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0px var(--shadow-color);
+    }
+    #lang-toggle:active {
+      transform: translate(1px, 1px);
+      box-shadow: 2px 2px 0px var(--shadow-color);
+    }
+    @media (max-width: 500px) {
+      #lang-toggle { top: 0.7rem; right: 0.9rem; font-size: 0.75rem; padding: 0.4rem 0.7rem; }
+    }
   </style>
 </head>
 <body>
 
+  <button id="lang-toggle" onclick="toggleLanguage()">🇲🇽 Español</button>
+
   <header>
     <div class="logo">
       <span class="logo-icon">💀</span>
-      <h1>Bones</h1>
+      <h1 data-en="Bones" data-es="Bones">Bones</h1>
     </div>
-    <p>A collection of weird little web games.</p>
+    <p data-en="A collection of weird little web games." data-es="Una colección de jueguitos web bien raros.">A collection of weird little web games.</p>
   </header>
 
   <main class="grid">
@@ -282,11 +312,11 @@
         <span class="thumb-icon" style="color:#eef1f1;">💀</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #e74c3c;">Physics</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #e74c3c;" data-en="Physics" data-es="Física">Physics</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">Super Skeleton Sandbox</h2>
-      <p class="card-desc">A physics playground where you ARE a skeleton. Fight zombies, pilot a submarine to Plastic Beach, discover secret achievements, and unlock gear as you explore a massive hand-built world.</p>
+      <h2 class="card-title" data-en="Super Skeleton Sandbox" data-es="Súper Sandbox de Esqueleto">Super Skeleton Sandbox</h2>
+      <p class="card-desc" data-en="A physics playground where you ARE a skeleton. Fight zombies, pilot a submarine to Plastic Beach, discover secret achievements, and unlock gear as you explore a massive hand-built world." data-es="Un parque de física donde TÚ eres un esqueleto. Pelea contra zombis, pilotea un submarino hasta Plastic Beach, descubre logros secretos y desbloquea equipo mientras exploras un mundo enorme hecho a mano.">A physics playground where you ARE a skeleton. Fight zombies, pilot a submarine to Plastic Beach, discover secret achievements, and unlock gear as you explore a massive hand-built world.</p>
     </a>
 
     <!-- ── QUACK OF DEATH ─────────────────────────────────────── -->
@@ -296,11 +326,11 @@
         <span class="thumb-icon" style="color:#4cff4c;">🗿</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #27ae60;">Shooter</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #27ae60;" data-en="Shooter" data-es="Disparos">Shooter</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">Quack of Death</h2>
-      <p class="card-desc">A retro FPS with a twist — you're a moaiduck. Defend yourself against Moaiduck mafiosos and survive as long as Humanly possible(or duckly possible in this case) can in this doom inspired arena shooter.</p>
+      <h2 class="card-title" data-en="Quack of Death" data-es="Quack of Death">Quack of Death</h2>
+      <p class="card-desc" data-en="A retro FPS with a twist — you're a moaiduck. Defend yourself against Moaiduck mafiosos and survive as long as Humanly possible(or duckly possible in this case) can in this doom inspired arena shooter." data-es="Un FPS retro con un giro: eres un pato-moái. Defiéndete de los mafiosos pato-moái y sobrevive todo lo humanamente posible (o \&quot;patamente\&quot; posible, en este caso) en este shooter de arena inspirado en Doom.">A retro FPS with a twist — you're a moaiduck. Defend yourself against Moaiduck mafiosos and survive as long as Humanly possible(or duckly possible in this case) can in this doom inspired arena shooter.</p>
     </a>
 
     <!-- ── CRAPPY CAVE EXPLORER ───────────────────────────────── -->
@@ -310,11 +340,11 @@
         <span class="thumb-icon" style="color:#ffd700;">⛏️</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #f1c40f; color: #0e0f11;">Mining</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #f1c40f; color: #0e0f11;" data-en="Mining" data-es="Minería">Mining</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">Crappy Cave Explorer</h2>
-      <p class="card-desc">In this game youre a red cube progressing an infinitley generating cave, you can mine, and you can build,What else needs to be said? oh yeah, theres also other miners in there and skeletons.</p>
+      <h2 class="card-title" data-en="Crappy Cave Explorer" data-es="Crappy Cave Explorer">Crappy Cave Explorer</h2>
+      <p class="card-desc" data-en="In this game youre a red cube progressing an infinitley generating cave, you can mine, and you can build,What else needs to be said? oh yeah, theres also other miners in there and skeletons." data-es="En este juego eres un cubo rojo explorando una cueva que se genera infinitamente. Puedes minar y puedes construir. ¿Qué más se puede decir? Ah sí, también hay otros mineros ahí abajo y esqueletos.">In this game youre a red cube progressing an infinitley generating cave, you can mine, and you can build,What else needs to be said? oh yeah, theres also other miners in there and skeletons.</p>
     </a>
 
     <!-- ── TREE RPG ────────────────────────────────────────────── -->
@@ -324,11 +354,11 @@
         <span class="thumb-icon" style="color:#a8e860;">🌳</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #7ed957; color: #0e0f11;">RPG</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #7ed957; color: #0e0f11;" data-en="RPG" data-es="RPG">RPG</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">Tree RPG</h2>
-      <p class="card-desc">A kid with a stick discovers Grandma's backyard bush is secretly an ancient, evil tree warrior. Turn-based combat, three minibosses, and a twist ending. 📱 Mobile-friendly (on-screen D-pad).</p>
+      <h2 class="card-title" data-en="Tree RPG" data-es="Tree RPG">Tree RPG</h2>
+      <p class="card-desc" data-en="A kid with a stick discovers Grandma's backyard bush is secretly an ancient, evil tree warrior. Turn-based combat, three minibosses, and a twist ending. 📱 Mobile-friendly (on-screen D-pad)." data-es="Un niño con un palo descubre que el arbusto del patio de la abuela es en secreto un antiguo guerrero árbol maligno. Combate por turnos, tres jefes intermedios y un final con sorpresa. 📱 Compatible con celular (D-pad en pantalla).">A kid with a stick discovers Grandma's backyard bush is secretly an ancient, evil tree warrior. Turn-based combat, three minibosses, and a twist ending. 📱 Mobile-friendly (on-screen D-pad).</p>
     </a>
 
     <!-- ── TURTLE RACES ────────────────────────────────────────── -->
@@ -338,25 +368,25 @@
         <span class="thumb-icon" style="color:#ffffff;">🐢</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #5ce1e6; color: #0e0f11;">Casino</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #5ce1e6; color: #0e0f11;" data-en="Casino" data-es="Casino">Casino</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">Turtle Races</h2>
-      <p class="card-desc">Click your way to victory or bet on the field. Name your turtle, buy accessories, and watch out for random chaos on the track. 📱 Mobile-friendly.</p>
+      <h2 class="card-title" data-en="Turtle Races" data-es="Carreras de Tortugas">Turtle Races</h2>
+      <p class="card-desc" data-en="Click your way to victory or bet on the field. Name your turtle, buy accessories, and watch out for random chaos on the track. 📱 Mobile-friendly." data-es="Haz clic para ganar o apuesta por tu favorita. Ponle nombre a tu tortuga, cómprale accesorios y cuidado con el caos aleatorio en la pista. 📱 Compatible con celular.">Click your way to victory or bet on the field. Name your turtle, buy accessories, and watch out for random chaos on the track. 📱 Mobile-friendly.</p>
     </a>
 
     <!-- ── PAGAN VALLEY ────────────────────────────────────────── -->
     <a href="cobre-valley.html" class="card"
        style="--hover-accent: #e8791e;">
       <div class="thumb thumb-pagan">
-        <span class="thumb-icon" style="color:#e8791e;">🏢</span>
+        <span class="thumb-icon" style="color:#e8791e;">🗿</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #e74c3c;">Open World</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #e74c3c;" data-en="Open World" data-es="Mundo Abierto">Open World</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">Cobre Valley</h2>
-      <p class="card-desc">Top-down chaos in a small town with a Moai Mart, an off-limits factory, and mischievous duck-moai hybrids. Play as 4 unlockable characters. 📱 Mobile-friendly (virtual joystick).</p>
+      <h2 class="card-title" data-en="Cobre Valley" data-es="Cobre Valley">Cobre Valley</h2>
+      <p class="card-desc" data-en="Top-down chaos in a small town with a Moai Mart, an off-limits factory, and mischievous duck-moai hybrids. Play as 4 unlockable characters. 📱 Mobile-friendly (virtual joystick)." data-es="Caos en vista aérea en un pueblito con un Moai Mart, una fábrica prohibida y traviesos híbridos de pato y moái. Juega con 4 personajes desbloqueables. 📱 Compatible con celular (joystick virtual).">Top-down chaos in a small town with a Moai Mart, an off-limits factory, and mischievous duck-moai hybrids. Play as 4 unlockable characters. 📱 Mobile-friendly (virtual joystick).</p>
     </a>
 
     <!-- ── GO TO SLEEP ─────────────────────────────────────────── -->
@@ -366,11 +396,11 @@
         <span class="thumb-icon" style="color:#c8b8f0;">😴</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #8a6ad0;">Horror-lite</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #8a6ad0;" data-en="Horror-lite" data-es="Terror ligero">Horror-lite</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">Go To Sleep</h2>
-      <p class="card-desc">You just need to fall asleep. Watch the closet, under the bed, and the hallway - check what's wrong before it's too late, but don't run out of courage. 📱 Mobile-friendly (tap-only).</p>
+      <h2 class="card-title" data-en="Go To Sleep" data-es="Ve a Dormir">Go To Sleep</h2>
+      <p class="card-desc" data-en="You just need to fall asleep. Watch the closet, under the bed, and the hallway - check what's wrong before it's too late, but don't run out of courage. 📱 Mobile-friendly (tap-only)." data-es="Solo necesitas quedarte dormido. Vigila el clóset, debajo de la cama y el pasillo. Revisa qué anda mal antes de que sea tarde, pero no te quedes sin valor. 📱 Compatible con celular (solo con toques).">You just need to fall asleep. Watch the closet, under the bed, and the hallway - check what's wrong before it's too late, but don't run out of courage. 📱 Mobile-friendly (tap-only).</p>
     </a>
 
     <!-- ── THE BOX ─────────────────────────────────────────────── -->
@@ -380,11 +410,11 @@
         <span class="thumb-icon" style="color:#c02020;">📦</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #c02020;">Horror</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #c02020;" data-en="Horror" data-es="Terror">Horror</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">The Box</h2>
-      <p class="card-desc">A side-scrolling escape from a bio-containment bunker. Restore power at 3 terminals, drag your box along behind you, and hide when the Subject gets close. 📱 Mobile-friendly.</p>
+      <h2 class="card-title" data-en="The Box" data-es="La Caja">The Box</h2>
+      <p class="card-desc" data-en="A side-scrolling escape from a bio-containment bunker. Restore power at 3 terminals, drag your box along behind you, and hide when the Subject gets close. 📱 Mobile-friendly." data-es="Un escape de desplazamiento lateral desde un búnker de biocontención. Restaura la energía en 3 terminales, arrastra tu caja contigo y escóndete cuando el Sujeto se acerque. 📱 Compatible con celular.">A side-scrolling escape from a bio-containment bunker. Restore power at 3 terminals, drag your box along behind you, and hide when the Subject gets close. 📱 Mobile-friendly.</p>
     </a>
 
     <!-- ── FULFILLMENT ─────────────────────────────────────────── -->
@@ -394,18 +424,38 @@
         <span class="thumb-icon" style="color:#e8c060;">📦</span>
       </div>
       <div class="meta">
-        <span class="badge" style="background: #e8c060; color: #1a1206;">Sim</span>
-        <span class="status live">Live</span>
+        <span class="badge" style="background: #e8c060; color: #1a1206;" data-en="Sim" data-es="Simulador">Sim</span>
+        <span class="status live" data-en="Live" data-es="Disponible">Live</span>
       </div>
-      <h2 class="card-title">Fulfillment</h2>
-      <p class="card-desc">Pack and ship orders on a tight deadline. Grab the right box, time the peanut pour, seal it with tape, and keep supply stocked - orders get stranger as the week goes on. 📱 Mobile-friendly.</p>
+      <h2 class="card-title" data-en="Fulfillment" data-es="Fulfillment">Fulfillment</h2>
+      <p class="card-desc" data-en="Pack and ship orders on a tight deadline. Grab the right box, time the peanut pour, seal it with tape, and keep supply stocked - orders get stranger as the week goes on. 📱 Mobile-friendly." data-es="Empaca y envía pedidos contra el reloj. Toma la caja correcta, calcula bien el relleno, séllala con cinta y mantén el inventario surtido. Los pedidos se vuelven más raros conforme avanza la semana. 📱 Compatible con celular.">Pack and ship orders on a tight deadline. Grab the right box, time the peanut pour, seal it with tape, and keep supply stocked - orders get stranger as the week goes on. 📱 Mobile-friendly.</p>
     </a>
 
   </main>
 
   <footer>
-    Made with HTML &amp; too much coffee &nbsp;<span>𓆉</span>
+    <span data-en="Made with HTML &amp; too much coffee" data-es="Hecho con HTML y demasiado café">Made with HTML &amp; too much coffee</span> &nbsp;<span>𓆉</span>
   </footer>
+
+  <script>
+    function setLanguage(lang) {
+      document.querySelectorAll('[data-en]').forEach(el => {
+        el.textContent = el.getAttribute('data-' + lang) || el.getAttribute('data-en');
+      });
+      document.documentElement.lang = lang === 'es' ? 'es-MX' : 'en';
+      localStorage.setItem('bonesLang', lang);
+      const btn = document.getElementById('lang-toggle');
+      btn.textContent = lang === 'es' ? '🇺🇸 English' : '🇲🇽 Español';
+    }
+    function toggleLanguage() {
+      const current = localStorage.getItem('bonesLang') || 'en';
+      setLanguage(current === 'en' ? 'es' : 'en');
+    }
+    (function initLang() {
+      const saved = localStorage.getItem('bonesLang') || 'en';
+      setLanguage(saved);
+    })();
+  </script>
 
 </body>
 </html>
